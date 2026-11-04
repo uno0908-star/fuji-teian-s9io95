@@ -1,0 +1,1062 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="人件費の異常検知・原因分析エージェント（設計デモ）">
+<style>*{margin:0;padding:0}img,svg{max-width:100%}</style>
+</head>
+<body><div style="position:fixed;right:12px;bottom:12px;z-index:999"><a href="works.html" style="display:inline-block;background:#1c4f8f;color:#fff;font:700 13px/1 sans-serif;padding:10px 14px;border-radius:999px;text-decoration:none">← 制作実績に戻る</a></div>
+<title>人件費調書</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Shippori+Mincho:wght@400;500;600&display=swap">
+
+<style>
+/* ============================================================
+   トークン
+   ============================================================ */
+:root{
+  color-scheme: light;
+  --ground:#eef1ee;
+  --panel:#ffffff;
+  --sunken:#f6f8f6;
+  --rail:#ffffff;
+  --line:#e0e5e0;
+  --line-strong:#c6cfc8;
+  --ink:#171b19;
+  --ink-2:#4c554f;
+  --ink-3:#79837c;
+  --accent:#1e4034;
+  --accent-ink:#1e4034;
+  --accent-soft:#e7efea;
+  --accent-line:#b9d1c4;
+
+  --up:#e34948;        /* 増加＝人件費が増えた方向 */
+  --dn:#2a78d6;        /* 減少 */
+  --up-soft:#fbecec;
+  --dn-soft:#eaf1fb;
+  --neutral:#9aa39c;
+
+  --good:#0ca30c;
+  --warn:#fab219;
+  --crit:#d03b3b;
+  --good-soft:#eaf6ea;
+  --warn-soft:#fdf4e0;
+  --crit-soft:#fbecec;
+  --late-ink:#8a6100;
+
+  --shadow:0 1px 2px rgba(20,30,24,.05), 0 10px 28px rgba(20,30,24,.06);
+
+  --f-ui:"IBM Plex Sans JP","Hiragino Sans","Yu Gothic UI",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --f-doc:"Shippori Mincho","Yu Mincho","Hiragino Mincho ProN",serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --ground:#0c0f0d; --panel:#161a18; --sunken:#1b201d; --rail:#131715;
+    --line:#272d29; --line-strong:#3b433e;
+    --ink:#eef2ef; --ink-2:#a5afa9; --ink-3:#78827b;
+    --accent:#8fc9b2; --accent-ink:#9fd3be; --accent-soft:#15302a; --accent-line:#2a5346;
+    --up:#e66767; --dn:#3987e5; --up-soft:#2d1616; --dn-soft:#152539; --neutral:#7d867f;
+    --good-soft:#132a13; --warn-soft:#2e2410; --crit-soft:#2d1616; --late-ink:#fab219;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.34);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --ground:#0c0f0d; --panel:#161a18; --sunken:#1b201d; --rail:#131715;
+  --line:#272d29; --line-strong:#3b433e;
+  --ink:#eef2ef; --ink-2:#a5afa9; --ink-3:#78827b;
+  --accent:#8fc9b2; --accent-ink:#9fd3be; --accent-soft:#15302a; --accent-line:#2a5346;
+  --up:#e66767; --dn:#3987e5; --up-soft:#2d1616; --dn-soft:#152539; --neutral:#7d867f;
+  --good-soft:#132a13; --warn-soft:#2e2410; --crit-soft:#2d1616; --late-ink:#fab219;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.34);
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--f-ui);font-size:14.5px;line-height:1.75;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{margin:0;line-height:1.42;text-wrap:balance}
+p{margin:0}
+a{color:var(--accent-ink)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--dn);outline-offset:2px;border-radius:3px}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important}}
+.wrap{max-width:1360px;margin:0 auto;padding:0 24px}
+.pitch h1,.pitch .lede,.memo .sub,.msec > p{max-width:44em}   /* 本文だけは読みやすい行長に留める */
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+/* ============================================================
+   1層目：提案
+   ============================================================ */
+.pitch{background:var(--panel);border-bottom:1px solid var(--line)}
+.pitch-in{padding:62px 0 42px}
+.eyebrow{display:flex;gap:11px;align-items:center;font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;color:var(--ink-3)}
+.eyebrow::after{content:"";flex:1;height:1px;background:var(--line)}
+.pitch h1{font-family:var(--f-doc);font-weight:600;font-size:clamp(29px,4.2vw,45px);line-height:1.36;margin:22px 0 0;max-width:19em}
+.pitch .lede{font-family:var(--f-doc);font-size:16.5px;line-height:2.05;color:var(--ink-2);max-width:40em;margin-top:20px}
+.pitch .lede + .lede{margin-top:13px}
+.spec{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));margin-top:36px;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.spec div{padding:15px 17px;border-right:1px solid var(--line);background:var(--sunken)}
+.spec div:last-child{border-right:0}
+.spec dt{font-size:10.5px;letter-spacing:.09em;color:var(--ink-3);font-weight:500}
+.spec dd{margin:4px 0 0;font-size:14px;font-weight:500;line-height:1.6}
+.disclosure{margin-top:22px;padding:14px 18px;border-left:2px solid var(--line-strong);background:var(--sunken);border-radius:0 4px 4px 0;font-size:13px;line-height:1.9;color:var(--ink-2);max-width:58em}
+.disclosure b{color:var(--ink);font-weight:600}
+
+/* ============================================================
+   2層目：アプリ
+   ============================================================ */
+.stage{padding:38px 0 54px}
+.stage-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:13px}
+.stage-head h2{font-family:var(--f-doc);font-size:19px;font-weight:600}
+.stage-head span{font-size:12px;color:var(--ink-3)}
+
+.app{background:var(--panel);border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow);overflow:hidden}
+.topbar{display:flex;align-items:center;gap:15px;padding:0 18px;height:54px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:600;letter-spacing:.02em}
+.brand .mk{width:25px;height:25px;border:1.5px solid var(--accent);border-radius:4px;display:grid;place-items:center;color:var(--accent)}
+.topbar .per{font-family:var(--f-mono);font-size:12px;color:var(--ink-2);padding-left:15px;border-left:1px solid var(--line)}
+.topbar .sp{flex:1}
+.tgl{display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:12px;color:var(--ink-2);user-select:none;padding:6px 11px;border:1px solid var(--line);border-radius:999px;background:var(--panel);transition:.15s}
+.tgl:hover{border-color:var(--line-strong)}
+.tgl .sw{width:29px;height:16px;border-radius:999px;background:var(--line-strong);position:relative;transition:background .18s;flex:none}
+.tgl .sw::after{content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:var(--panel);transition:transform .18s}
+body.notes-on .tgl{border-color:var(--accent-line);background:var(--accent-soft);color:var(--accent-ink);font-weight:500}
+body.notes-on .tgl .sw{background:var(--accent)}
+body.notes-on .tgl .sw::after{transform:translateX(13px)}
+.who{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2)}
+.who .av{width:25px;height:25px;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink);display:grid;place-items:center;font-size:10.5px;font-weight:600;border:1px solid var(--accent-line)}
+
+.shell{display:grid;grid-template-columns:206px minmax(0,1fr);min-height:780px}
+.rail{border-right:1px solid var(--line);background:var(--rail);padding:13px 9px;display:flex;flex-direction:column;gap:2px}
+.rail .grp{font-size:10px;letter-spacing:.1em;color:var(--ink-3);padding:12px 10px 5px;font-weight:500}
+.nav{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:9px 10px;border:0;background:none;border-radius:5px;cursor:pointer;font-size:13px;color:var(--ink-2);transition:.12s}
+.nav:hover{background:var(--sunken);color:var(--ink)}
+.nav[aria-current="true"]{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+.nav .ic{width:15px;height:15px;flex:none}
+.nav .n{margin-left:auto;font-family:var(--f-mono);font-size:10.5px;color:var(--ink-3)}
+.nav[aria-current="true"] .n{color:var(--accent-ink)}
+
+.main{padding:22px 24px 32px;min-width:0}
+.vhead{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.vhead h3{font-size:17.5px;font-weight:600}
+.vhead .sub{font-size:12px;color:var(--ink-3);margin-left:auto;font-family:var(--f-mono)}
+
+/* 解説 */
+.note{display:none}
+body.notes-on .note{display:block;margin:11px 0 0;padding:10px 13px;background:var(--accent-soft);border-left:2px solid var(--accent);border-radius:0 5px 5px 0;font-size:12.5px;line-height:1.85;color:var(--ink-2)}
+body.notes-on .note::before{content:"設計 " attr(data-n);display:block;font-family:var(--f-mono);font-size:9.5px;letter-spacing:.12em;color:var(--accent-ink);font-weight:600;margin-bottom:2px}
+body.notes-on .note b{color:var(--ink);font-weight:600}
+body.notes-on .note code{font-family:var(--f-mono);font-size:11.5px;background:var(--panel);border:1px solid var(--accent-line);border-radius:3px;padding:0 4px}
+
+.card{border:1px solid var(--line);border-radius:7px;background:var(--panel);padding:15px 17px;min-width:0}
+.card > h4{font-size:12px;font-weight:600;letter-spacing:.03em;color:var(--ink-2);display:flex;align-items:center;gap:9px;margin-bottom:3px}
+.card > h4 .r{margin-left:auto;font-family:var(--f-mono);font-size:10.5px;color:var(--ink-3);font-weight:400;letter-spacing:0}
+
+/* 集計バー */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0;border:1px solid var(--line);border-radius:7px;overflow:hidden;margin-bottom:14px}
+.kpis > div{padding:12px 15px;border-right:1px solid var(--line)}
+.kpis > div:last-child{border-right:0}
+.kpis .k{font-size:11px;color:var(--ink-3)}
+.kpis .v{font-family:var(--f-mono);font-size:24px;font-weight:600;line-height:1.35;letter-spacing:-.01em}
+.kpis .v em{font-style:normal;font-size:12px;color:var(--ink-3);font-family:var(--f-ui);margin-left:2px}
+.kpis .f{font-size:11px;color:var(--ink-3)}
+.kpis .flag .v{color:var(--crit)}
+
+.filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;font-size:12.5px;color:var(--ink-2)}
+select,input[type=text]{font:inherit;font-size:12.5px;color:var(--ink);background:var(--panel);border:1px solid var(--line-strong);border-radius:4px;padding:5px 8px}
+
+/* 表 */
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:7px}
+table.t{width:100%;border-collapse:collapse;font-size:13px;min-width:900px}
+table.t th{text-align:left;padding:9px 10px;background:var(--sunken);border-bottom:1px solid var(--line);font-size:10.5px;letter-spacing:.04em;color:var(--ink-2);font-weight:600;white-space:nowrap;line-height:1.5}
+table.t th.n,table.t td.n{text-align:right}
+table.t td{padding:8px 11px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle}
+table.t tbody tr:last-child td{border-bottom:0}
+table.t tbody tr.click{cursor:pointer}
+table.t tbody tr.click:hover{background:var(--sunken)}
+table.t tbody tr[aria-current="true"]{background:var(--accent-soft)}
+table.t td.n,table.t td.mn{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+table.t td .nm{font-weight:500}
+table.t td .sb{font-size:11px;color:var(--ink-3);font-family:var(--f-mono)}
+.gap{color:var(--up);font-weight:600}
+.gapd{color:var(--dn);font-weight:600}
+.zc{display:inline-flex;align-items:center;gap:5px;font-family:var(--f-mono);font-weight:600}
+.sev{width:3px;height:15px;border-radius:2px;display:inline-block;vertical-align:-2px}
+.rchip{display:inline-block;font-family:var(--f-mono);font-size:10.5px;font-weight:500;
+  border:1px solid var(--line-strong);border-radius:3px;padding:0 4px;margin-right:3px;color:var(--ink-2);line-height:1.7}
+.rlegend{display:flex;gap:18px;flex-wrap:wrap;margin-top:11px;font-size:11.5px;color:var(--ink-2)}
+.rlegend span{display:inline-flex;align-items:center;gap:6px}
+.spark{display:block}
+
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:1px 7px;border-radius:4px;line-height:1.7;white-space:nowrap}
+.pill.hi{color:var(--crit);background:var(--crit-soft)}
+.pill.mid{color:var(--late-ink);background:var(--warn-soft)}
+.pill.ok{color:var(--good);background:var(--good-soft)}
+.pill.q{color:var(--ink-2);background:var(--sunken)}
+
+/* 事業所詳細 */
+.dcols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
+/* 職員テーブルを持つ行だけ右を広くとる（7列→5列にしても素の1:1では入らない） */
+.dcols.w2{grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr)}
+table.t.compact{min-width:0}
+table.t.compact th,table.t.compact td{padding:8px 8px}
+.dhead{border:1px solid var(--line);border-radius:7px;padding:15px 18px;margin-bottom:14px;background:var(--sunken)}
+.dhead .t{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.dhead h4{font-size:18px;font-weight:600}
+.dhead .m{font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3);margin-top:3px}
+.dhead .row{display:flex;gap:26px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.dhead .row div .k{font-size:10.5px;color:var(--ink-3)}
+.dhead .row div .v{font-family:var(--f-mono);font-size:19px;font-weight:600;line-height:1.4}
+
+.chartbox{position:relative;margin-top:8px}
+.chartbox svg{display:block;width:100%;height:auto}
+.chartbox text{font-family:var(--f-mono);font-size:10px;fill:var(--ink-3)}
+.chartbox text.lbl{font-size:11px;fill:var(--ink-2)}
+.chartbox text.big{font-size:11.5px;font-weight:600;fill:var(--ink)}
+.chartbox text.inv{fill:#fff}
+.chartbox .gl{stroke:var(--line);stroke-width:1}
+.chartbox .md{stroke:var(--ink-2);stroke-width:1}
+.chartbox .peer{fill:var(--neutral)}
+.chartbox .me{fill:var(--up);stroke:var(--panel);stroke-width:2}
+.chartbox .bup{fill:var(--up)}
+.chartbox .bdn{fill:var(--dn)}
+.chartbox .btot{fill:var(--ink-2)}
+.chartbox .conn{stroke:var(--line-strong);stroke-width:1}
+
+.legend{display:flex;gap:15px;flex-wrap:wrap;font-size:11px;color:var(--ink-2);margin-top:10px;align-items:center}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:11px;height:11px;border-radius:2px;display:inline-block}
+.legend i.dot{border-radius:50%;width:9px;height:9px}
+
+.kv{display:flex;flex-direction:column;gap:0;margin-top:4px}
+.kv > div{display:flex;gap:12px;align-items:baseline;padding:6px 0;border-bottom:1px dotted var(--line);font-size:13px}
+.kv > div:last-child{border-bottom:0}
+.kv .k{color:var(--ink-2);flex:1;min-width:0}
+.kv .v{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-weight:500;white-space:nowrap}
+.kv .v.up{color:var(--up)}
+.kv .v.dn{color:var(--dn)}
+.kv > div.tot{border-top:1px solid var(--line-strong);border-bottom:0;margin-top:4px;padding-top:8px;font-weight:600}
+
+.alert{border:1px solid var(--warn);background:var(--warn-soft);border-radius:6px;padding:12px 14px;margin-top:12px;font-size:12.5px;line-height:1.85;display:flex;gap:11px;align-items:flex-start}
+.alert svg{flex:none;margin-top:3px}
+.alert b{font-weight:600}
+
+.aibox{border:1px solid var(--accent-line);border-radius:7px;overflow:hidden;margin-top:14px}
+.aibox .h{background:var(--accent-soft);padding:9px 15px;font-size:11.5px;color:var(--accent-ink);font-weight:600;display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--accent-line)}
+.aibox .h .r{margin-left:auto;font-family:var(--f-mono);font-size:10.5px;font-weight:400;color:var(--ink-3)}
+.aibox .b{padding:15px 18px;font-size:13.5px;line-height:2.0;white-space:pre-wrap}
+.aibox .b em{font-style:normal;background:var(--warn-soft);box-shadow:inset 0 -1px 0 var(--warn);padding:0 2px;border-radius:2px}
+.aibox .f{border-top:1px solid var(--line);padding:11px 18px;background:var(--sunken);font-size:11.5px;color:var(--ink-2);line-height:1.85}
+.aibox .f b{color:var(--ink);font-weight:600}
+
+/* バッチ */
+.steps{display:flex;flex-direction:column}
+.step{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px dotted var(--line);font-size:13px}
+.step:last-child{border-bottom:0}
+.step .n{width:19px;height:19px;border-radius:50%;flex:none;display:grid;place-items:center;font-family:var(--f-mono);font-size:9.5px;border:1.5px solid var(--good);background:var(--good);color:#fff;margin-top:2px}
+.step .tx{flex:1;min-width:0}
+.step .tx .t{font-weight:500}
+.step .tx .d{font-size:11.5px;color:var(--ink-3);font-family:var(--f-mono);margin-top:1px}
+.step .ms{font-family:var(--f-mono);font-size:11px;color:var(--ink-3);white-space:nowrap;margin-top:3px}
+
+.sheets{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:10px}
+.sheet{border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.sheet .h{background:var(--sunken);border-bottom:1px solid var(--line);padding:7px 11px;font-family:var(--f-mono);font-size:11px;color:var(--ink-2)}
+.sheet .b{padding:9px 11px;font-size:11.5px;color:var(--ink-2);line-height:1.8}
+.sheet .b b{color:var(--ink);font-weight:600;display:block;font-size:12.5px;margin-bottom:2px;font-family:var(--f-ui)}
+
+/* ============================================================
+   3層目：設計メモ
+   ============================================================ */
+.memo{background:var(--panel);border-top:1px solid var(--line);padding:60px 0 70px}
+.memo h2{font-family:var(--f-doc);font-size:25px;font-weight:600}
+.memo .sub{font-family:var(--f-doc);font-size:14.5px;line-height:2;color:var(--ink-2);max-width:44em;margin-top:8px}
+.msec{margin-top:42px}
+.msec > h3{font-family:var(--f-doc);font-size:17px;font-weight:600;padding-bottom:9px;border-bottom:1px solid var(--line-strong);display:flex;align-items:baseline;gap:11px}
+.msec > h3 .no{font-family:var(--f-mono);font-size:10.5px;color:var(--ink-3);font-weight:400;letter-spacing:.1em}
+.msec > p{font-family:var(--f-doc);font-size:14.5px;line-height:2.05;color:var(--ink-2);margin-top:14px;max-width:45em}
+.msec > p + p{margin-top:11px}
+.msec b{color:var(--ink);font-weight:600}
+
+.fml{background:var(--sunken);border:1px solid var(--line);border-radius:6px;padding:14px 17px;margin-top:16px;font-family:var(--f-mono);font-size:13px;line-height:2.1;overflow-x:auto}
+.fml .c{color:var(--ink-3);font-size:11.5px}
+
+.tw2{overflow-x:auto;margin-top:16px;border:1px solid var(--line);border-radius:7px}
+table.m{width:100%;border-collapse:collapse;font-size:13px;min-width:620px}
+table.m th{text-align:left;padding:10px 14px;background:var(--sunken);border-bottom:1px solid var(--line);font-size:11px;letter-spacing:.04em;color:var(--ink-2);font-weight:600;white-space:nowrap}
+table.m td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.75}
+table.m tr:last-child td{border-bottom:0}
+table.m td.mono{font-family:var(--f-mono);font-size:12px;white-space:nowrap;color:var(--ink-2)}
+table.m td.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.wk{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:11px;margin-top:18px}
+.wkc{border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+.wkc .n{font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;color:var(--accent-ink);font-weight:600}
+.wkc .t{font-size:13.5px;font-weight:600;margin-top:4px;line-height:1.6}
+.wkc .d{font-size:12px;color:var(--ink-2);margin-top:5px;line-height:1.8}
+
+.risks{margin-top:16px;border-left:2px solid var(--line-strong);padding:2px 0 2px 18px}
+.risks li{font-size:13.5px;line-height:2;color:var(--ink-2)}
+.risks li b{color:var(--ink)}
+
+.foot{border-top:1px solid var(--line);padding:26px 0 38px;font-size:12px;color:var(--ink-3);display:flex;gap:20px;flex-wrap:wrap}
+
+@media (max-width:1080px){
+  .shell{grid-template-columns:1fr}
+  .rail{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:8px;gap:5px}
+  .rail .grp{display:none}
+  .nav{width:auto;white-space:nowrap;padding:8px 12px}
+  .dcols{grid-template-columns:1fr}
+}
+@media (max-width:640px){
+  .main{padding:16px 13px 24px}
+  .wrap{padding:0 15px}
+  .pitch-in{padding:42px 0 30px}
+}
+</style>
+
+<!-- ============================ 1層目 ============================ -->
+<header class="pitch">
+  <div class="wrap pitch-in">
+    <div class="eyebrow">制作実績 ／ 人件費の異常検知・原因分析（試作）</div>
+    <h1>512事業所から、<br>見るべき10件と、その理由を。</h1>
+    <p class="lede">人件費に異常のある事業所を自動で抽出し、原因を金額に分解して、確認すべき職員まで名指しする——「抽出・分解・名指し」の3つを、実際に動く画面にしたものです。左の一覧から事業所を選ぶと、そのまま分解結果に降りられます。</p>
+    <p class="lede">この仕事で難しいのはLLMの使い方ではなく、<b>「何をもって異常と呼ぶか」と「その異常をどの順番で分解するか」</b>だと考えています。そこをどう設計するつもりかを、文章ではなく画面でお見せするために作りました。</p>
+
+    <dl class="spec">
+      <div><dt>対象</dt><dd>ダミー512事業所 × 12か月</dd></div>
+      <div><dt>異常判定</dt><dd>中央値 + MAD のロバストZ</dd></div>
+      <div><dt>原因分解</dt><dd>数量効果 / 単価効果 / 手当 / 賞与</dd></div>
+      <div><dt>LLMの役割</dt><dd>数値判定はしない。文章化のみ</dd></div>
+      <div><dt>構成</dt><dd>HTML単一ファイル / 外部依存なし</dd></div>
+    </dl>
+
+    <p class="disclosure"><b>数値はすべてダミーです。</b>実在の法人・事業所・個人とは一切関係がなく、実在のデータは使用していません。介護報酬の単価や人件費率の水準も、画面の説明のために置いた仮の値です。<b>AI所見の文章も、この画面のために用意した出力例</b>で、実際のAPIは呼んでいません。お見せしたいのは文章の巧拙ではなく、その文章を出すために手前で何を計算しておくか、という設計のほうです。</p>
+  </div>
+</header>
+
+<!-- ============================ 2層目 ============================ -->
+<div class="stage">
+  <div class="wrap">
+    <div class="stage-head">
+      <h2>動くもの</h2>
+      <span>右上の「解説モード」で、各画面の設計判断が表示されます</span>
+    </div>
+
+    <div class="app">
+      <div class="topbar">
+        <div class="brand">
+          <span class="mk" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1.5 12.5V6M5.5 12.5V2.5M9.5 12.5V8M13 12.5h-12"/></svg>
+          </span>人件費調書
+        </div>
+        <span class="per mono">対象月 2026年7月　／　法人グループ全体</span>
+        <div class="sp"></div>
+        <button class="tgl" id="noteBtn" aria-pressed="false"><span class="sw" aria-hidden="true"></span>解説モード</button>
+        <div class="who"><span class="av">経</span>経営管理部</div>
+      </div>
+
+      <div class="shell">
+        <nav class="rail" aria-label="メインメニュー">
+          <div class="grp">分析</div>
+          <button class="nav" data-go="scan" aria-current="true">
+            <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="5"/><path d="M10.8 10.8L14.5 14.5"/></svg>
+            異常検知<span class="n" id="n-scan">34</span>
+          </button>
+          <button class="nav" data-go="detail">
+            <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 14V9M6 14V3M10 14V6M14 14v-9"/></svg>
+            事業所別 分解
+          </button>
+          <div class="grp">運用</div>
+          <button class="nav" data-go="batch">
+            <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2.5 3.5h11v9h-11z"/><path d="M2.5 6.5h11M6 9.5h5"/></svg>
+            出力・月次バッチ
+          </button>
+          <button class="nav" data-go="param">
+            <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1.5v13M3 4.5h10M3 11.5h10"/><circle cx="6" cy="4.5" r="1.6" fill="currentColor" stroke="none"/><circle cx="10.5" cy="11.5" r="1.6" fill="currentColor" stroke="none"/></svg>
+            判定パラメータ
+          </button>
+        </nav>
+        <main class="main" id="main"></main>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ 3層目 ============================ -->
+<section class="memo">
+  <div class="wrap">
+    <h2>設計メモ</h2>
+    <p class="sub">画面より前に決めておくべきことを書いています。実データを拝見してから変わる前提のたたき台ですが、たたき台がないと議論が始まらないので。</p>
+
+    <div class="msec">
+      <h3><span class="no">01</span>なぜ平均±標準偏差ではなく、中央値とMADなのか</h3>
+      <p>異常検知の基準を平均と標準偏差で作ると、<b>異常値そのものが基準を汚します</b>。人件費率が突出した事業所が数件あるだけで平均も標準偏差も引き上げられ、その事業所が「平均から2σ以内」に収まってしまう。セグメントあたり20〜60事業所という規模では、これが現実に起きます。</p>
+      <p>そこで中央値と MAD（中央絶対偏差）を使います。半数が外れ値にならない限り基準が壊れません。正規分布のとき標準偏差と一致するよう 1.4826 を掛けて、見慣れたZスコアと同じ感覚で読める形にします。</p>
+      <div class="fml">
+        MAD = median( | x<sub>i</sub> − median(x) | )<br>
+        ロバストZ = ( x − median(x) ) ÷ ( 1.4826 × MAD )<br>
+        <span class="c">x ＝ 当該事業所の人件費率、median/MAD ＝ 同一サービス種別 × 同規模帯のセグメント内で算出</span>
+      </div>
+      <p>そのうえで、Zスコアだけに頼りません。<b>「水準は高くないが、先月から急に悪化した」事業所はZでは拾えない</b>ので、前月比・過去12か月の自己水準からの乖離を別ルールとして並列に回し、どのルールで引っかかったかを一覧に出します。ルールを1本に統合しないのは、あとから「なぜこの事業所が出たのか」を説明できるようにするためです。</p>
+    </div>
+
+    <div class="msec">
+      <h3><span class="no">02</span>原因分解——ここがこの仕組みの中心だと考えています</h3>
+      <p>「人件費が増えた」という事実から先に進むには、増えた金額を<b>互いに重ならない要因に分けきる</b>必要があります。人件費を次のように置くと、増減を分解できます。</p>
+      <div class="fml">
+        人件費 = ( 総実働時間 H × 平均時間単価 w ) + 諸手当 + 賞与・一時金 + 法定福利費<br><br>
+        Δ人件費 = <b>ΔH × w<sub>0</sub></b> &nbsp;+&nbsp; <b>Δw × H<sub>1</sub></b> &nbsp;+&nbsp; Δ諸手当 &nbsp;+&nbsp; Δ賞与 &nbsp;+&nbsp; Δ法定福利費<br>
+        <span class="c">　　　　　　　数量効果　　　　単価効果　　　　　　　　　　　　　　（添字0＝比較期間、1＝当月）</span><br><br>
+        ΔH = Δ所定内 + Δ残業 + Δ休日勤務 + Δ応援受入 − Δ応援送出<br>
+        Δw = 職種構成の変化 + 昇給・処遇改善 + 高単価職員の勤務比率
+      </div>
+      <p>この形にしておくと、画面のウォーターフォールがそのまま説明文になります。「時間が増えたのか、単価が上がったのか、一時金が乗ったのか」は打つ手がまったく違うので、ここを混ぜたまま出すと現場は動けません。<b>賞与・一時金を除いた経常ベースを必ず併記する</b>のも同じ理由です。処遇改善加算の一時金支給月は人件費率が跳ねますが、それは異常ではありません。</p>
+    </div>
+
+    <div class="msec">
+      <h3><span class="no">03</span>LLMに何をさせて、何をさせないか</h3>
+      <p>数値の判定はPython側で完結させ、LLMには<b>「確定した数値を、人が読んで動ける文章に組み立てる」役割だけ</b>を与えます。理由は3つあります。再現性（同じ入力で同じ判定が出ないと監査に使えない）、検証可能性（なぜその事業所が出たのかを式で説明できる）、そしてコストです。</p>
+      <div class="tw2">
+        <table class="m">
+          <thead><tr><th>工程</th><th>担当</th><th>理由</th></tr></thead>
+          <tbody>
+            <tr><td>取込・名寄せ・突合</td><td class="mono">Python / pandas</td><td>再現性が要る。毎月同じ結果になる必要がある</td></tr>
+            <tr><td>異常スコアの算出</td><td class="mono">Python</td><td>式で説明でき、検算できる</td></tr>
+            <tr><td>原因の金額分解</td><td class="mono">Python</td><td>合計が必ず一致する（分解の残差ゼロ）ことを担保</td></tr>
+            <tr><td>確認事項の抽出</td><td class="mono">Python + ルール</td><td>「影響額上位3名」等は計算で決まる</td></tr>
+            <tr><td>文章化・優先順位の言語化</td><td class="mono">LLM API</td><td>ここだけは人が読む文章にする価値がある</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><b>個人情報をAPIに送らない設計にします。</b>LLMへ渡すのは集計済みの数値と、事業所内で採番した職員ID（E-0417 等）だけです。氏名・生年月日・住所・賃金台帳の原本は送りません。出力を画面に表示する際に、手元の対応表でIDを氏名に戻します。既存のクラウド契約に合わせて Amazon Bedrock / Google Vertex AI 経由にすることもできます。</p>
+    </div>
+
+    <div class="msec">
+      <h3><span class="no">04</span>500事業所に、個別ルールを作らないための設計</h3>
+      <p>いちばん重要な制約だと考えています。個別作り込みを避ける鍵は2つです。</p>
+      <p><b>ひとつは、事業所ごとの違いをコードではなく「表」に追い出すこと。</b>判定の基準値はコードに書かず、セグメント（サービス種別 × 規模帯）ごとのパラメータ表として持ちます。事業所が増えてもコードは1行も増えず、セグメントに割り当てるだけです。サンプルが少ないセグメント（n&lt;15）は自動的に上位区分へマージして、統計が暴れないようにします。</p>
+      <p><b>もうひとつは、取込の様式差を「列名マッピング定義」で吸収すること。</b>事業所ごとにExcelの列名や並びが違うのは避けられませんが、そのたびに読込コードを書き足すと保守が破綻します。「この様式では『実働時間』が『総労働時間』という列名で7列目にある」という対応表を定義ファイルとして持ち、コードは定義に従って読むだけにします。新しい様式が出てきたときに追加するのは定義の1ブロックであって、プログラムではありません。</p>
+    </div>
+
+    <div class="msec">
+      <h3><span class="no">05</span>1.5か月の進め方</h3>
+      <div class="wk">
+        <div class="wkc"><div class="n">WEEK 1</div><div class="t">実データを見る</div><div class="d">数事業所・数か月分をいただき、様式・粒度・欠損・突合可能性を確認。ここで方式を確定します。</div></div>
+        <div class="wkc"><div class="n">WEEK 2</div><div class="t">取込と突合</div><div class="d">マッピング定義の形を決め、PL人件費と賃金台帳合計が一致するかを検証。ここが通らないと分析は無意味です。</div></div>
+        <div class="wkc"><div class="n">WEEK 3</div><div class="t">異常検知のPoC</div><div class="d">セグメント統計と判定を実装。「出てきた事業所が実感と合うか」を現場の方に見ていただきます。</div></div>
+        <div class="wkc"><div class="n">WEEK 4</div><div class="t">原因分解</div><div class="d">分解ロジックと確認事項の抽出。実際の異常事業所で答え合わせをします。</div></div>
+        <div class="wkc"><div class="n">WEEK 5</div><div class="t">全事業所への展開</div><div class="d">500事業所分のバッチ実行、LLM連携、Excel出力。処理時間とコストを実測します。</div></div>
+        <div class="wkc"><div class="n">WEEK 6</div><div class="t">調整と引き渡し</div><div class="d">しきい値の調整、ソースコードと手順書。社内で運用・改修できる状態にします。</div></div>
+      </div>
+      <p>週1回の定例は、上の各週の終わりに置く想定です。<b>Week 3 の「実感と合うか」の確認が、一番重要な工程</b>だと考えています。ここで感触が合わなければ、判定の軸そのものを組み替えます。</p>
+    </div>
+
+    <div class="msec">
+      <h3><span class="no">06</span>先に申し上げておきたい前提とリスク</h3>
+      <ul class="risks">
+        <li><b>データ形式のばらつきが最大の工数変動要因です。</b>500事業所が同一様式なら取込は数日ですが、法人ごとにバラバラだと定義作りに時間がかかります。サンプルを拝見してから実装範囲を合意させてください。</li>
+        <li><b>応援勤務の計上ルールを最初に確認させてください。</b>応援元・応援先のどちらで人件費を計上する運用かで、分解の式が変わります。ルールが統一されていない場合は、その不整合の検出自体を成果物に含めます。</li>
+        <li><b>PLと賃金台帳が突合しない事業所は、分析より先に原因を潰す必要があります。</b>合計が合わないデータから出した異常値は信用できません。突合結果を毎月レポートに出す設計にしています。</li>
+        <li><b>賞与月・処遇改善加算の一時金支給月は、そのままだと全事業所が異常判定になります。</b>経常ベースの併算と、支給月マスタでの補正を最初から入れます。</li>
+        <li><b>このデモには実装していないもの：</b>実データの取込、認証・権限、実際のAPI呼び出し、データベース。この画面はブラウザだけで完結するダミーです。</li>
+      </ul>
+    </div>
+
+    <div class="foot">
+      <span class="mono">人件費調書 ／ 異常検知・原因分析エージェント（設計デモ）</span>
+      <span>数値はすべてダミーです。実データでの検証は、サンプルをいただき次第すぐに着手できます。</span>
+    </div>
+  </div>
+</section>
+
+<script>
+"use strict";
+
+/* ============================================================
+   ダミーデータ
+   ============================================================ */
+
+/* セグメント統計（サービス種別 × 規模帯） */
+const SEG = [
+  {svc:"訪問介護",           size:"〜30",   n:52, med:78.2, mad:2.5},
+  {svc:"訪問介護",           size:"31〜",   n:38, med:76.5, mad:3.6},
+  {svc:"訪問看護",           size:"〜30",   n:36, med:72.8, mad:3.9},
+  {svc:"通所介護",           size:"〜30",   n:55, med:65.8, mad:2.4},
+  {svc:"通所介護",           size:"31〜50", n:48, med:63.5, mad:1.9},
+  {svc:"通所介護",           size:"51〜",   n:22, med:61.2, mad:2.1},
+  {svc:"通所リハビリ",       size:"31〜50", n:27, med:62.1, mad:2.3},
+  {svc:"通所リハビリ",       size:"51〜",   n: 9, med:59.8, mad:2.0},
+  {svc:"認知症GH",           size:"〜30",   n:41, med:68.4, mad:1.9},
+  {svc:"小規模多機能",       size:"〜30",   n:27, med:71.3, mad:3.4},
+  {svc:"短期入所",           size:"31〜50", n:31, med:64.7, mad:2.6},
+  {svc:"特定施設",           size:"〜50",   n:11, med:60.9, mad:3.5},
+  {svc:"特定施設",           size:"51〜80", n:29, med:58.6, mad:3.0},
+  {svc:"介護老人福祉施設",   size:"51〜80", n:34, med:61.9, mad:2.2},
+  {svc:"介護老人福祉施設",   size:"81〜",   n:18, med:60.4, mad:1.8},
+  {svc:"居宅介護支援",       size:"〜30",   n:34, med:82.6, mad:5.2}
+];
+const TOTAL_JIGYOSHO = SEG.reduce((a,s)=>a+s.n,0);   /* = 512 */
+const EXCLUDED = 7;                                   /* PL⇔賃金台帳が突合しない事業所 */
+const JUDGED   = TOTAL_JIGYOSHO - EXCLUDED;           /* = 505 */
+
+const robustZ = (x, med, mad) => (x - med) / (1.4826 * mad);
+
+/* 判定ルール（4本を並列に評価し、1本でも該当すれば「要確認」） */
+const RULES = {
+  R1:{t:"セグメント比較：ロバストZ ≥ 2.0"},
+  R2:{t:"前月比の急変：+5.0pt 以上"},
+  R3:{t:"自己水準からの乖離：過去12か月中央値 +4.0pt 以上"},
+  R4:{t:"売上と人件費の方向不一致：売上±3%内で人件費 +8%"}
+};
+
+/* 異常検出された事業所（上位10件を表示） */
+const HITS = [
+  {id:"J-1042", rules:["R1","R2","R3"], name:"城東デイサービス",       svc:"通所介護",         size:"31〜50", cap:40,  rate:72.5, prev:63.8, cause:"労働時間の増加・応援受入",
+   spark:[61.8,62.4,61.9,63.1,62.7,61.5,62.9,63.3,62.1,63.0,63.8,72.5]},
+  {id:"J-0318", rules:["R1","R3"], name:"陽だまり訪問介護 城北",   svc:"訪問介護",         size:"〜30",   cap:null,rate:89.4, prev:85.3, cause:"移動時間の計上ルール差",
+   spark:[77.9,78.4,79.1,78.2,80.0,79.4,81.2,82.6,83.1,84.0,85.3,89.4]},
+  {id:"J-0771", rules:["R1","R2"], name:"さくらの里 グループホーム", svc:"認知症GH",       size:"〜30",   cap:18,  rate:76.8, prev:65.6, cause:"夜勤体制の増員",
+   spark:[67.1,66.8,68.2,67.4,68.9,67.7,68.0,66.9,67.5,66.2,65.6,76.8]},
+  {id:"J-0209", rules:["R4"], name:"みなと特別養護老人ホーム", svc:"介護老人福祉施設", size:"51〜80", cap:80,  rate:67.2, prev:65.0, cause:"高単価職員の配置増",
+   spark:[61.4,62.0,61.7,62.5,63.1,62.8,63.6,64.2,64.0,64.8,65.0,67.2]},
+  {id:"J-0455", rules:["R2","R4"], name:"あおぞら小規模多機能",     svc:"小規模多機能",     size:"〜30",   cap:25,  rate:78.9, prev:72.1, cause:"稼働率の低下（売上側）",
+   spark:[70.8,71.5,70.9,72.0,71.2,70.6,71.8,72.4,71.9,72.6,72.1,78.9]},
+  {id:"J-0913", rules:["R3"], name:"けやき居宅介護支援",       svc:"居宅介護支援",     size:"〜30",   cap:null,rate:94.1, prev:90.7, cause:"担当件数の減少",
+   spark:[82.1,83.0,82.4,84.1,83.6,85.0,86.2,87.4,88.1,89.5,90.7,94.1]},
+  {id:"J-1188", rules:["R2"], name:"港南デイサービス",         svc:"通所介護",         size:"31〜50", cap:45,  rate:68.1, prev:62.2, cause:"賞与・一時金（経常ベースは正常）",
+   spark:[62.9,63.4,62.8,63.9,63.1,62.5,63.7,64.0,62.9,63.5,62.2,68.1]},
+  {id:"J-0602", rules:["R3"], name:"ひまわり訪問看護",         svc:"訪問看護",         size:"〜30",   cap:null,rate:81.0, prev:79.2, cause:"新規採用の重複期間",
+   spark:[72.4,73.0,72.1,73.8,74.5,75.1,76.0,77.2,78.0,78.6,79.2,81.0]},
+  {id:"J-0087", rules:["R3"], name:"川辺ショートステイ",       svc:"短期入所",         size:"31〜50", cap:32,  rate:70.3, prev:66.8, cause:"休日勤務の増加",
+   spark:[64.2,64.9,65.1,64.6,65.8,65.2,66.0,65.5,66.4,66.1,66.8,70.3]},
+  {id:"J-0340", rules:["R4"], name:"若草デイサービス",         svc:"通所介護",         size:"〜30",   cap:28,  rate:70.9, prev:69.4, cause:"平均時間単価の上昇",
+   spark:[65.2,65.9,66.4,66.0,67.1,67.6,68.2,68.0,68.9,69.1,69.4,70.9]}
+];
+HITS.forEach(h=>{
+  const s = SEG.find(x=>x.svc===h.svc && x.size===h.size);
+  h.med = s.med; h.mad = s.mad; h.n = s.n;
+  h.gap = +(h.rate - s.med).toFixed(1);
+  h.z   = +robustZ(h.rate, s.med, s.mad).toFixed(1);
+  h.mom = +(h.rate - h.prev).toFixed(1);
+});
+HITS.sort((a,b)=>b.z-a.z);
+
+/* 詳細分析：城東デイサービス（J-1042） */
+const CASE = {
+  id:"J-1042",
+  houjin:"社会福祉法人 ダミー福祉会",
+  sales:18420, cost:13351, rate:72.5,
+  base:{sales:18100, cost:11274, rate:62.3, label:"直近6か月平均"},
+  /* 内訳（千円） */
+  parts:{
+    wage:{now:10226, base:8910},
+    tate:{now:715,   base:620},
+    bonus:{now:840,  base:320},
+    houtei:{now:1570,base:1424}
+  },
+  hours:{H0:5400, H1:5994, w0:1650, w1:1706},
+  waterfall:[
+    {k:"数量効果（総実働時間 +594h）", v:980,  note:"ΔH × w₀ = 594h × 1,650円"},
+    {k:"単価効果（平均時間単価 +56円）", v:336, note:"Δw × H₁ = 56円 × 5,994h"},
+    {k:"諸手当", v:95,  note:"夜勤手当の増"},
+    {k:"賞与・一時金", v:520, note:"処遇改善の一時金（経常外）"},
+    {k:"法定福利費", v:146, note:"賃金増に連動"}
+  ],
+  hoursBreak:[
+    {k:"所定内",   v:12},
+    {k:"残業",     v:268},
+    {k:"休日勤務", v:112},
+    {k:"応援受入", v:202}
+  ],
+  shift:{plan:5640, actual:5994},
+  staff:[
+    {id:"E-0388", job:"介護職員（応援受入）", h:96.0,  dh:96.0,  ot:4.0,  rate:1920, amt:184, flag:"応援元でも計上あり"},
+    {id:"E-0203", job:"看護職員",             h:176.0, dh:48.0,  ot:8.0,  rate:2450, amt:118, flag:""},
+    {id:"E-0417", job:"介護職員",             h:198.5, dh:36.5,  ot:42.0, rate:1780, amt:65,  flag:"残業 前月比 +28.5h"}
+  ],
+  ouen:{recv:202, dup:96, dupAmt:184, from:"城北事業所ほか2事業所"}
+};
+CASE.name = HITS.find(h=>h.id===CASE.id).name;
+CASE.svc  = HITS.find(h=>h.id===CASE.id).svc;
+CASE.size = HITS.find(h=>h.id===CASE.id).size;
+CASE.cap  = HITS.find(h=>h.id===CASE.id).cap;
+CASE.med  = HITS.find(h=>h.id===CASE.id).med;
+CASE.mad  = HITS.find(h=>h.id===CASE.id).mad;
+CASE.n    = HITS.find(h=>h.id===CASE.id).n;
+CASE.z    = HITS.find(h=>h.id===CASE.id).z;
+CASE.gap  = HITS.find(h=>h.id===CASE.id).gap;
+CASE.mom  = HITS.find(h=>h.id===CASE.id).mom;
+/* 経常ベース（賞与・一時金を除く） */
+CASE.rateEx = +(((CASE.cost - CASE.parts.bonus.now) / CASE.sales) * 100).toFixed(1);
+CASE.medEx  = 61.8;
+
+/* ピア分布（同一セグメント n=48 のダミー人件費率） */
+const PEERS = (()=>{
+  const out=[]; let s=20260701;
+  const rnd=()=>{ s=(s*1103515245+12345)&0x7fffffff; return s/0x7fffffff; };
+  for(let i=0;i<47;i++){
+    const g = (rnd()+rnd()+rnd()-1.5)*3.4;   /* 中央値まわりに集める */
+    out.push(+(63.5+g).toFixed(1));
+  }
+  return out.sort((a,b)=>a-b);
+})();
+
+/* 月次バッチのログ */
+const BATCH = [
+  {t:"データ取込",     d:"512事業所 × 5種別 = 2,560ファイル", ms:"3分12秒", sub:"正常 2,548 / 要確認 12（列名が定義と不一致）"},
+  {t:"整合性の検証",   d:"PL人件費合計 ⇔ 賃金台帳合計 の突合", ms:"41秒",   sub:"一致 505事業所 / 差異 7事業所（分析対象から除外し別途報告）"},
+  {t:"セグメント統計", d:"14セグメントの中央値・MADを再計算",  ms:"8秒",    sub:"n<15 のセグメントは上位区分へ自動マージ（今回2件）"},
+  {t:"異常スコア算出", d:"505事業所 × 4ルール",               ms:"22秒",   sub:"要確認 34件（R1〜R4のいずれか該当）／ うち優先 3件（Z≥3.0）"},
+  {t:"原因の金額分解", d:"要確認34件のみドリルダウン",          ms:"1分05秒",sub:"分解の残差はすべて0円（合計一致を検証）"},
+  {t:"AIによる文章化", d:"34件をLLM APIへ（Batch API利用）",   ms:"—",      sub:"入力 197,200 tok / 出力 24,480 tok"},
+  {t:"出力",           d:"Excel 1ファイル（4シート）＋ 事業所別PDF 34件", ms:"48秒", sub:"共有ドライブへ自動保存"}
+];
+
+const COST = [
+  {m:"Claude Sonnet 5", io:"$2 / $10", sync:0.64, batch:0.32},
+  {m:"Claude Opus 5",   io:"$5 / $25", sync:1.60, batch:0.80},
+  {m:"Claude Haiku 4.5",io:"$1 / $5",  sync:0.32, batch:0.16}
+];
+
+/* ============================================================
+   状態と小物
+   ============================================================ */
+const state = { view:"scan", notes:false, sel:"J-1042", svcFilter:"すべて" };
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const sgn = n => (n>=0?"+":"−") + Math.abs(n).toLocaleString("ja-JP");
+const pt  = n => (n>=0?"+":"−") + Math.abs(n).toFixed(1) + "pt";
+
+const ICON = {
+  warn:`<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#fab219" stroke-width="1.7" stroke-linecap="round"><path d="M8 2l6.5 11.5H1.5z" stroke-linejoin="round"/><path d="M8 6.3v3.4M8 11.7v.2"/></svg>`,
+  ok:`<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#0ca30c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.5 3.5L13 4.5"/></svg>`
+};
+
+/* スパークライン（12か月） */
+function spark(vals, w, h){
+  const min = Math.min(...vals), max = Math.max(...vals), sp = (max-min)||1;
+  const x = i => i*(w-2)/(vals.length-1) + 1;
+  const y = v => h-2 - (v-min)/sp*(h-4);
+  const d = vals.map((v,i)=>(i?"L":"M")+x(i).toFixed(1)+" "+y(v).toFixed(1)).join(" ");
+  return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true">
+    <path d="${d}" fill="none" stroke="var(--neutral)" stroke-width="1.4" stroke-linejoin="round"/>
+    <circle cx="${x(vals.length-1).toFixed(1)}" cy="${y(vals[vals.length-1]).toFixed(1)}" r="2.6" fill="var(--up)"/>
+  </svg>`;
+}
+
+const zPill = z => z>=3 ? `<span class="pill hi">優先</span>` : `<span class="pill mid">要確認</span>`;
+
+/* ============================================================
+   ビュー：異常検知
+   ============================================================ */
+function viewScan(){
+  const rows = HITS.filter(h=> state.svcFilter==="すべて" || h.svc===state.svcFilter);
+  const svcs = ["すべて", ...new Set(HITS.map(h=>h.svc))];
+
+  return `
+  <div class="vhead"><h3>異常検知</h3><span class="sub">2026年7月分 ／ 判定完了 ${JUDGED}事業所</span></div>
+
+  <div class="kpis">
+    <div><div class="k">判定対象</div><div class="v">${JUDGED}<em>事業所</em></div><div class="f">全${TOTAL_JIGYOSHO}件中・突合NG ${EXCLUDED}件を除外</div></div>
+    <div class="flag"><div class="k">要確認（Z ≥ 2.0）</div><div class="v">34<em>件</em></div><div class="f">判定対象の 6.7%</div></div>
+    <div class="flag"><div class="k">優先（Z ≥ 3.0）</div><div class="v">3<em>件</em></div><div class="f">当日中の確認を推奨</div></div>
+    <div><div class="k">経常ベースでも異常</div><div class="v">26<em>件</em></div><div class="f">賞与・一時金を除いても高い</div></div>
+    <div><div class="k">処理時間</div><div class="v">5:36</div><div class="f">取込から出力まで</div></div>
+  </div>
+
+  <p class="note" data-n="A">最初に出すのは異常の<b>件数ではなく「全体の何％か」</b>です。毎月34件前後で安定していれば運用は回りますが、これが80件に跳ねたらしきい値かデータのほうを疑うべきで、その判断材料をトップに置いています。<b>突合NGの7件を「異常」ではなく「除外」として別枠で出している</b>のも同じ理由で、データが壊れている事業所を異常事業所に混ぜると、現場は原因のない原因を探しに行くことになります。</p>
+
+  <div class="filters" style="margin-top:14px">
+    <span>サービス種別</span>
+    <select id="svcSel">${svcs.map(s=>`<option ${s===state.svcFilter?"selected":""}>${esc(s)}</option>`).join("")}</select>
+    <span style="color:var(--ink-3)">上位 ${rows.length} 件を表示（全34件）　行をクリックすると分解へ</span>
+  </div>
+
+  <div class="tw">
+    <table class="t">
+      <thead><tr>
+        <th>状態</th><th>事業所</th><th>セグメント</th>
+        <th class="n">人件費率<br><span style="font-weight:400;color:var(--ink-3)">（中央値）</span></th>
+        <th class="n">乖離</th><th class="n">ロバストZ</th>
+        <th class="n">前月比</th><th>12か月推移</th><th>該当ルール</th><th>一次判定の主因</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map(h=>`
+        <tr class="click" data-hit="${h.id}" aria-current="${h.id===state.sel}">
+          <td>${zPill(h.z)}</td>
+          <td><span class="nm">${esc(h.name)}</span><br><span class="sb">${h.id}${h.cap?" · 定員"+h.cap:""}</span></td>
+          <td style="font-size:12.5px">${esc(h.svc)}<br><span class="sb">${esc(h.size)} · n=${h.n}</span></td>
+          <td class="n">${h.rate.toFixed(1)}%<br><span class="sb">（${h.med.toFixed(1)}%）</span></td>
+          <td class="n"><span class="gap">${pt(h.gap)}</span></td>
+          <td class="n"><span class="zc" style="color:${h.z>=3?"var(--crit)":"var(--late-ink)"}">${h.z>=0?"+":""}${h.z.toFixed(1)}</span></td>
+          <td class="n"><span class="${h.mom>=0?"gap":"gapd"}">${pt(h.mom)}</span></td>
+          <td>${spark(h.spark,92,26)}</td>
+          <td>${h.rules.map(r=>`<span class="rchip" title="${esc(RULES[r].t)}">${r}</span>`).join("")}</td>
+          <td style="white-space:normal;font-size:12.5px;color:var(--ink-2);min-width:150px">${esc(h.cause)}</td>
+        </tr>`).join("")}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="rlegend">
+    ${Object.entries(RULES).map(([k,v])=>`<span><i class="rchip" style="margin:0">${k}</i>${esc(v.t)}</span>`).join("")}
+  </div>
+
+  <p class="note" data-n="B">この一覧で一番大事な列は<b>「該当ルール」</b>です。4本のルールを1つのスコアに統合していません。統合すれば精度は上がるかもしれませんが、<b>担当者に「なぜこの事業所が出たのか」を説明できなくなります</b>。<br>実際、Zスコアが2.0未満でも一覧に載っている事業所が7件あります。けやき居宅介護支援はZ+1.5と穏やかですが、12か月の線を見ると<b>半年かけてじわじわ上がっている</b>——R3（自己水準からの乖離）で拾った漸増型です。急変型と漸増型は打ち手がまったく違うので、スパークラインとルール名を並べて目で区別できるようにしています。</p>`;
+}
+
+/* ============================================================
+   ビュー：事業所別 分解
+   ============================================================ */
+function viewDetail(){
+  const c = CASE;
+  const dCost = c.cost - c.base.cost;
+  const wf = c.waterfall;
+
+  const other = state.sel !== c.id ? HITS.find(h=>h.id===state.sel) : null;
+
+  return `
+  <div class="vhead"><h3>事業所別 分解</h3><span class="sub">${c.id} ／ 2026年7月分</span></div>
+
+  ${other ? `<div class="alert" style="margin:0 0 14px">${ICON.warn}<span>このデモで分解まで作り込んでいるのは <b>${esc(c.name)}（${c.id}）</b> の1件だけです。実装では全34件が同じ形で出力されます。<span style="color:var(--ink-3)">（${esc(other.name)} を選択されました）</span></span></div>` : ""}
+
+  <div class="dhead">
+    <div class="t"><h4>${esc(c.name)}</h4>
+      <span class="pill hi">優先（Z +${c.z.toFixed(1)}）</span>
+      <span class="pill q">${esc(c.svc)} ・ ${esc(c.size)} ・ 定員${c.cap}</span>
+    </div>
+    <div class="m">${c.id} · ${esc(c.houjin)} · 比較対象：${esc(c.base.label)}</div>
+    <div class="row">
+      <div><div class="k">人件費率</div><div class="v" style="color:var(--up)">${c.rate.toFixed(1)}%</div></div>
+      <div><div class="k">セグメント中央値（n=${c.n}）</div><div class="v" style="color:var(--ink-3)">${c.med.toFixed(1)}%</div></div>
+      <div><div class="k">乖離</div><div class="v" style="color:var(--up)">${pt(c.gap)}</div></div>
+      <div><div class="k">人件費</div><div class="v">${c.cost.toLocaleString("ja-JP")}<span style="font-size:12px;color:var(--ink-3)">千円</span></div></div>
+      <div><div class="k">前期差</div><div class="v" style="color:var(--up)">${sgn(dCost)}<span style="font-size:12px;color:var(--ink-3)">千円</span></div></div>
+    </div>
+  </div>
+
+  <div class="dcols">
+    <div class="card">
+      <h4>① 異常の根拠<span class="r">同一セグメント内の分布</span></h4>
+      <div class="chartbox" id="peerBox"></div>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--neutral)"></i>同セグメントの47事業所</span>
+        <span><i class="dot" style="background:var(--up)"></i>${esc(c.name)}</span>
+        <span><i style="width:1px;height:12px;border-radius:0;background:var(--ink-2)"></i>中央値 ${c.med.toFixed(1)}%</span>
+      </div>
+      <div class="kv" style="margin-top:12px">
+        <div><span class="k">人件費率（当月）</span><span class="v up">${c.rate.toFixed(1)}%</span></div>
+        <div><span class="k">賞与・一時金を除いた経常ベース</span><span class="v up">${c.rateEx.toFixed(1)}%</span></div>
+        <div><span class="k">同上・セグメント中央値</span><span class="v">${c.medEx.toFixed(1)}%</span></div>
+        <div class="tot"><span class="k">経常ベースでの乖離</span><span class="v up">${pt(+(c.rateEx-c.medEx).toFixed(1))}</span></div>
+      </div>
+      <p class="note" data-n="C">賞与・一時金を除いた<b>経常ベースを必ず併記します</b>。処遇改善加算の一時金支給月は全事業所の人件費率が跳ねるので、それを異常として出すと誰も一覧を見なくなります。この事業所は一時金を除いても中央値より${pt(+(c.rateEx-c.medEx).toFixed(1))}高く、<b>一過性では説明がつかない</b>——これが「調べる価値がある」と判断した根拠です。</p>
+    </div>
+
+    <div class="card">
+      <h4>② 原因の金額分解<span class="r">${esc(c.base.label)}との差 ${sgn(dCost)}千円</span></h4>
+      <div class="chartbox" id="wfBox"></div>
+      <div class="kv" style="margin-top:10px">
+        ${wf.map(w=>`<div><span class="k">${esc(w.k)}<br><span style="font-size:11px;color:var(--ink-3);font-family:var(--f-mono)">${esc(w.note)}</span></span><span class="v ${w.v>=0?"up":"dn"}">${sgn(w.v)}</span></div>`).join("")}
+        <div class="tot"><span class="k">合計</span><span class="v up">${sgn(dCost)} 千円</span></div>
+      </div>
+      <p class="note" data-n="D">分解の<b>合計が必ず元の差額と一致する</b>ことを検証したうえで出しています（残差ゼロ）。ここが合わない分解は、どこかに未把握の要因が残っているということなので、そのまま出すと現場に無駄足を踏ませます。数量効果と単価効果の分け方は <code>ΔH×w₀ + Δw×H₁</code> で、交差項を単価効果側に寄せています。分け方は複数あるので、<b>どの定義で分解したかを画面に書いておく</b>のが実務では効きます。</p>
+    </div>
+  </div>
+
+  <div class="dcols w2" style="margin-top:14px">
+    <div class="card">
+      <h4>③ 時間の内訳<span class="r">総実働時間 ${sgn(c.hours.H1-c.hours.H0)}h</span></h4>
+      <div class="chartbox" id="hbBox"></div>
+      <div class="kv" style="margin-top:10px">
+        <div><span class="k">当月のシフト予定</span><span class="v">${c.shift.plan.toLocaleString("ja-JP")} h</span></div>
+        <div><span class="k">当月の実働（タイムカード）</span><span class="v up">${c.shift.actual.toLocaleString("ja-JP")} h</span></div>
+        <div class="tot"><span class="k">予定と実績の乖離</span><span class="v up">${sgn(c.shift.actual-c.shift.plan)} h（+${((c.shift.actual/c.shift.plan-1)*100).toFixed(1)}%）</span></div>
+      </div>
+      <div class="alert">${ICON.warn}<span><b>応援勤務の計上に不整合の可能性があります。</b>当事業所で受け入れた応援 ${c.ouen.recv}h のうち <span class="mono">${c.ouen.dup}h</span> は、応援元（${esc(c.ouen.from)}）の人件費にも計上されています。二重計上であれば約 <span class="mono">${c.ouen.dupAmt}千円</span> の過大計上です。</span></div>
+      <p class="note" data-n="E">この不整合は、1事業所だけを見ていても絶対に見つかりません。<b>全事業所を同じ器に載せたからこそ検出できる種類の異常</b>で、500事業所を横断で持つ意味がここにあると考えています。実装では、応援勤務の突合を全事業所に対して毎月自動で走らせます。</p>
+    </div>
+
+    <div class="card">
+      <h4>④ 確認すべき職員<span class="r">影響額 上位3名</span></h4>
+      <div class="tw" style="border:0">
+        <table class="t compact">
+          <thead><tr><th>職員ID</th><th>職種</th><th class="n">実働（前期差）</th><th class="n">時間単価</th><th class="n">影響額</th></tr></thead>
+          <tbody>
+            ${c.staff.map(s=>`<tr>
+              <td class="mn">${s.id}</td>
+              <td style="white-space:normal;font-size:12.5px">${esc(s.job)}${s.flag?`<br><span class="pill mid" style="margin-top:3px">${esc(s.flag)}</span>`:""}</td>
+              <td class="n">${s.h.toFixed(1)}h<br><span class="gap" style="font-size:11.5px">${sgn(s.dh)}h</span></td>
+              <td class="n">${s.rate.toLocaleString("ja-JP")}円</td>
+              <td class="n gap">${sgn(s.amt)}千円</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+      <p class="note" data-n="F">「誰を見ればいいか」まで出さないと、担当者は結局タイムカードを全員ぶん開くことになります。順位は<b>人件費への影響額（前期差 × 時間単価）で機械的に決めています</b>——残業時間の長い順ではありません。単価の高い職員が少し多く出勤したほうが、単価の低い職員の残業より効くことがあるからです。<b>氏名は保持せず、事業所内で採番したIDで扱います。</b></p>
+    </div>
+  </div>
+
+  <div class="aibox">
+    <div class="h">⑤ AIによる所見<span class="r">Claude API ／ 入力 5,812 tok・出力 718 tok</span></div>
+    <div class="b">${esc(c.name)}は、同一サービス種別・同規模帯（${c.svc}／${c.size}、n=${c.n}）の中央値より人件費率が<em>${c.gap.toFixed(1)}pt高く</em>、ロバストZは<em>+${c.z.toFixed(1)}</em>です。賞与・一時金${c.parts.bonus.now.toLocaleString("ja-JP")}千円を除いた経常ベースでも中央値より${(c.rateEx-c.medEx).toFixed(1)}pt高く、一時的な支給だけでは説明がつきません。
+
+主な原因候補は3つです。
+① 総実働時間の増加（+594h、影響額 +980千円）。内訳は残業+268h、応援受入+202h、休日勤務+112h。
+② 平均時間単価の上昇（+56円、影響額 +336千円）。看護職員の勤務時間増が主因とみられます。
+③ 諸手当の増加（+95千円）。夜勤手当です。
+
+確認いただきたい点は3つです。
+1. 職員<em>E-0417</em>の残業42.0h（前期差+28.5h）が事前承認されたものか。
+2. 応援受入202hのうち<em>96hが応援元の城北事業所でも人件費計上</em>されています。二重計上であれば約184千円の過大計上です。計上ルールの確認をお願いします。
+3. 当月のシフト予定5,640hに対し実績5,994h（+6.3%）。<em>予定作成の段階から人員が不足していた</em>可能性があります。翌月のシフトも同様であれば、増員か稼働調整の判断が要ります。</div>
+    <div class="f"><b>APIへ渡した情報：</b>集計済みの数値（人件費率・乖離・Z・分解額・時間内訳）、事業所コード、事業所内で採番した職員ID。　<b>渡していない情報：</b>氏名・生年月日・住所・賃金台帳の原本・マイナンバー等。IDは画面表示の際に手元の対応表で氏名へ戻します。</div>
+  </div>
+  <p class="note" data-n="G">この文章のうち、<b>数字はひとつもLLMが計算していません</b>。すべてPython側で確定させた値を渡し、LLMには「どれを先に書くか」「どう言えば現場が動けるか」だけを任せています。逆に言えば、<b>手前の分解がここまで終わっていれば、文章化はモデルの性能をほとんど問いません</b>。だからコストも安く済みます（右のメニュー「出力・月次バッチ」に試算があります）。</p>`;
+}
+
+/* ---- ピア分布（1次元ドットプロット） ---- */
+function drawPeer(){
+  const box = $("#peerBox"); if(!box) return;
+  const c = CASE;
+  const W=520, H=208, L=34, R=22, T=24, B=34;
+  const min=54, max=76;
+  const x = v => L + (v-min)/(max-min)*(W-L-R);
+
+  /* 同じ値が重なるので、ビン内で縦に積む */
+  const binH = 11, bins = {};
+  const dots = PEERS.map(v=>{
+    const b = Math.round(x(v)/9);
+    bins[b] = (bins[b]||0) + 1;
+    return {v, x:x(v), row:bins[b]-1};
+  });
+  const baseY = H-B-6;
+
+  box.innerHTML = `
+  <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="同一セグメント48事業所の人件費率の分布。中央値63.5%に対し、当事業所は72.5%で最も高い水準にあります。">
+    ${[55,60,65,70,75].map(t=>`<line class="gl" x1="${x(t).toFixed(1)}" x2="${x(t).toFixed(1)}" y1="${T}" y2="${baseY+7}"/>
+      <text x="${x(t).toFixed(1)}" y="${H-14}" text-anchor="middle">${t}%</text>`).join("")}
+    <line class="md" x1="${x(c.med).toFixed(1)}" x2="${x(c.med).toFixed(1)}" y1="${T-6}" y2="${baseY+7}"/>
+    <text class="lbl" x="${x(c.med).toFixed(1)}" y="${T-11}" text-anchor="middle">中央値 ${c.med}%</text>
+    ${dots.map(d=>`<circle class="peer" cx="${d.x.toFixed(1)}" cy="${(baseY-d.row*binH).toFixed(1)}" r="3.6"/>`).join("")}
+    <circle class="me" cx="${x(c.rate).toFixed(1)}" cy="${baseY.toFixed(1)}" r="6"/>
+    <text class="big" x="${x(c.rate).toFixed(1)}" y="${(baseY-14).toFixed(1)}" text-anchor="middle">${c.rate}%</text>
+    <text x="${W-R}" y="${H-14}" text-anchor="end">人件費率</text>
+  </svg>`;
+}
+
+/* ---- ウォーターフォール ---- */
+function drawWf(){
+  const box = $("#wfBox"); if(!box) return;
+  const c = CASE, items = c.waterfall;
+  const total = items.reduce((a,i)=>a+i.v,0);
+  const W=520, H=210, L=8, R=8, T=26, B=52;
+  const maxV = Math.max(total, ...items.map((_,i)=>items.slice(0,i+1).reduce((a,x)=>a+x.v,0)));
+  const y = v => T + (1 - v/(maxV*1.12))*(H-T-B);
+  const n = items.length + 1;
+  const slot = (W-L-R)/n;
+  const bw = Math.min(46, slot*0.6);
+
+  let run = 0, bars = [], conns = [];
+  items.forEach((it,i)=>{
+    const x0 = L + slot*i + (slot-bw)/2;
+    const top = y(run + Math.max(it.v,0));
+    const bot = y(run + Math.min(it.v,0));
+    bars.push({x:x0, y:top, h:Math.max(2, bot-top), v:it.v, k:it.k, cls:it.v>=0?"bup":"bdn"});
+    run += it.v;
+    if(i < items.length) conns.push({x1:x0, x2:L+slot*(i+1)+(slot-bw)/2+bw, y:y(run)});
+  });
+  const tx = L + slot*items.length + (slot-bw)/2;
+
+  const short = k => k.replace(/（.*）/,"").replace("・一時金","");
+
+  box.innerHTML = `
+  <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="人件費増加 2,077千円の要因分解。数量効果980、単価効果336、諸手当95、賞与520、法定福利費146。">
+    <line class="gl" x1="${L}" x2="${W-R}" y1="${y(0).toFixed(1)}" y2="${y(0).toFixed(1)}"/>
+    ${conns.map(c2=>`<line class="conn" x1="${c2.x1.toFixed(1)}" x2="${c2.x2.toFixed(1)}" y1="${c2.y.toFixed(1)}" y2="${c2.y.toFixed(1)}"/>`).join("")}
+    ${bars.map(b=>`<rect class="${b.cls}" x="${b.x.toFixed(1)}" y="${b.y.toFixed(1)}" width="${bw}" height="${b.h.toFixed(1)}" rx="3"/>
+      <text class="big" x="${(b.x+bw/2).toFixed(1)}" y="${(b.y-7).toFixed(1)}" text-anchor="middle">${sgn(b.v)}</text>`).join("")}
+    <rect class="btot" x="${tx.toFixed(1)}" y="${y(total).toFixed(1)}" width="${bw}" height="${(y(0)-y(total)).toFixed(1)}" rx="3"/>
+    <text class="big" x="${(tx+bw/2).toFixed(1)}" y="${(y(total)-7).toFixed(1)}" text-anchor="middle">${sgn(total)}</text>
+    ${items.map((it,i)=>{
+      const cx = L + slot*i + slot/2;
+      return `<text x="${cx.toFixed(1)}" y="${H-30}" text-anchor="middle">${esc(short(it.k))}</text>`;
+    }).join("")}
+    <text class="lbl" x="${(tx+bw/2).toFixed(1)}" y="${H-30}" text-anchor="middle">合計</text>
+    <text x="${L}" y="${H-10}">単位：千円　／　${esc(CASE.base.label)}との差</text>
+  </svg>`;
+}
+
+/* ---- 時間の内訳（横棒） ---- */
+function drawHb(){
+  const box = $("#hbBox"); if(!box) return;
+  const items = CASE.hoursBreak;
+  const W=520, H=132, L=76, R=68, T=8, B=8;
+  const max = Math.max(...items.map(i=>i.v))*1.05;
+  const rowH = (H-T-B)/items.length;
+  const bh = 16;
+  box.innerHTML = `
+  <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="総実働時間の増加594時間の内訳。残業268時間、応援受入202時間、休日勤務112時間、所定内12時間。">
+    ${items.map((it,i)=>{
+      const yy = T + rowH*i + (rowH-bh)/2;
+      const w = it.v/max*(W-L-R);
+      return `<text class="lbl" x="${L-10}" y="${(yy+bh/2+4).toFixed(1)}" text-anchor="end">${esc(it.k)}</text>
+        <rect class="bup" x="${L}" y="${yy.toFixed(1)}" width="${Math.max(2,w).toFixed(1)}" height="${bh}" rx="3"/>
+        <text class="big" x="${(L+w+9).toFixed(1)}" y="${(yy+bh/2+4).toFixed(1)}">+${it.v}h</text>`;
+    }).join("")}
+  </svg>`;
+}
+
+/* ============================================================
+   ビュー：出力・月次バッチ
+   ============================================================ */
+function viewBatch(){
+  return `
+  <div class="vhead"><h3>出力・月次バッチ</h3><span class="sub">2026年7月分 ／ 実行 2026-08-05 02:00</span></div>
+
+  <div class="dcols">
+    <div class="card">
+      <h4>月次バッチの実行ログ<span class="r">全7工程 ／ 5分36秒</span></h4>
+      <div class="steps">
+        ${BATCH.map((b,i)=>`<div class="step">
+          <span class="n">✓</span>
+          <span class="tx"><span class="t">${esc(b.t)}</span><span class="d">${esc(b.d)}</span>
+            <span style="display:block;font-size:11.5px;color:var(--ink-2);margin-top:3px">${esc(b.sub)}</span></span>
+          <span class="ms">${esc(b.ms)}</span>
+        </div>`).join("")}
+      </div>
+      <p class="note" data-n="H">工程2の<b>「PL人件費と賃金台帳の突合」を、分析より前に必ず置きます</b>。合計が合わないデータから出した異常値には意味がありません。差異のあった7事業所は異常判定から外し、別レポートで経理へ回します。ここを省くと、原因のない原因を担当者が探し続けることになります。</p>
+    </div>
+
+    <div class="card">
+      <h4>LLM APIコストの試算<span class="r">要確認34件ぶん・1か月</span></h4>
+      <div class="kv">
+        <div><span class="k">LLM呼び出し件数</span><span class="v">34 件</span><span style="font-size:11px;color:var(--ink-3)">／ ${TOTAL_JIGYOSHO}件中</span></div>
+        <div><span class="k">入力トークン</span><span class="v">197,200</span></div>
+        <div><span class="k">出力トークン</span><span class="v">24,480</span></div>
+      </div>
+      <div class="tw" style="margin-top:12px">
+        <table class="t" style="min-width:0">
+          <thead><tr><th>モデル</th><th class="n">単価 (入力/出力・100万tok)</th><th class="n">同期</th><th class="n">Batch API</th></tr></thead>
+          <tbody>
+            ${COST.map(c=>`<tr>
+              <td class="mn">${esc(c.m)}</td>
+              <td class="n" style="color:var(--ink-3)">${esc(c.io)}</td>
+              <td class="n">$${c.sync.toFixed(2)}</td>
+              <td class="n" style="font-weight:600">$${c.batch.toFixed(2)}</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:11.5px;color:var(--ink-3);margin-top:9px;line-height:1.8">月次バッチのためBatch API（50%割引）が使えます。1ドル150円換算で <b style="color:var(--ink)">月あたり約25〜120円</b>。単価は2026年6月時点のもので、Amazon Bedrock / Google Vertex AI 経由の場合は各社の価格が適用されます。</p>
+      <p class="note" data-n="I"><b>512事業所すべてにLLMを呼ぶ設計にはしません。</b>異常検知で絞った34件だけに呼びます。全件に呼ぶと15倍のコストがかかるうえ、正常な事業所について「特に問題ありません」という文章が478件ぶん生成されるだけで、誰も読みません。<b>絞り込みはコストの問題である以前に、読まれる資料にするための設計です。</b>数値判定をLLMに任せていないので、モデルは軽いもので足ります。</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h4>Excel出力の構成<span class="r">1ファイル4シート ＋ 事業所別PDF 34件</span></h4>
+    <div class="sheets">
+      <div class="sheet"><div class="h">Sheet 1</div><div class="b"><b>異常一覧</b>512事業所すべての行。Zスコア降順。フィルタで法人・エリア・種別を絞れる形にします。</div></div>
+      <div class="sheet"><div class="h">Sheet 2</div><div class="b"><b>事業所別 詳細</b>要確認34件の分解結果。ウォーターフォールの各項目を列に持ちます。</div></div>
+      <div class="sheet"><div class="h">Sheet 3</div><div class="b"><b>確認事項</b>職員ID単位。担当者がそのままチェックリストとして使える粒度に。</div></div>
+      <div class="sheet"><div class="h">Sheet 4</div><div class="b"><b>データ品質</b>取込エラー12件と突合差異7件。経理へ回す用。</div></div>
+    </div>
+    <p class="note" data-n="J">納品先は「システム」ではなく<b>Excel</b>にします。担当者が今まで使ってきた道具の中に結果を届けたほうが、確実に運用に乗るからです。専用画面を作ると、その画面を開く習慣を作るところから始めることになります。社内で運用保守される前提なら、なおさら形式は素朴なほうがいいと考えています。</p>
+  </div>`;
+}
+
+/* ============================================================
+   ビュー：判定パラメータ
+   ============================================================ */
+function viewParam(){
+  return `
+  <div class="vhead"><h3>判定パラメータ</h3><span class="sub">毎月のデータから自動再計算 ／ 14セグメント</span></div>
+
+  <div class="card">
+    <h4>セグメント統計<span class="r">サービス種別 × 規模帯 ／ 計 ${TOTAL_JIGYOSHO}事業所</span></h4>
+    <div class="tw" style="margin-top:10px">
+      <table class="t" style="min-width:640px">
+        <thead><tr><th>サービス種別</th><th>規模帯（定員）</th><th class="n">n</th><th class="n">人件費率 中央値</th><th class="n">MAD</th><th class="n">Z=2.0 の境界</th><th class="n">Z=3.0 の境界</th><th></th></tr></thead>
+        <tbody>
+          ${SEG.map(s=>{
+            const k = 1.4826*s.mad;
+            const small = s.n < 15;
+            return `<tr>
+              <td>${esc(s.svc)}</td><td style="color:var(--ink-3)">${esc(s.size)}</td>
+              <td class="n">${s.n}</td>
+              <td class="n">${s.med.toFixed(1)}%</td>
+              <td class="n" style="color:var(--ink-3)">${s.mad.toFixed(1)}</td>
+              <td class="n">${(s.med+2*k).toFixed(1)}%</td>
+              <td class="n">${(s.med+3*k).toFixed(1)}%</td>
+              <td>${small?`<span class="pill mid">上位区分へマージ</span>`:`<span class="pill ok">${ICON.ok}適用</span>`}</td>
+            </tr>`;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>
+    <p class="note" data-n="K">これが<b>「500事業所に個別ルールを作らない」ための表</b>です。事業所ごとの判定基準はどこにも書かれておらず、この14行だけで全事業所を判定しています。新しい事業所が増えても、セグメントに割り当てるだけでコードは1行も増えません。中央値とMADは毎月のデータから再計算されるので、業界全体の水準が動いても基準が自動で追随します。</p>
+  </div>
+
+  <div class="dcols" style="margin-top:14px">
+    <div class="card">
+      <h4>判定ルール<span class="r">4本を並列に評価</span></h4>
+      <div class="kv">
+        ${Object.entries(RULES).map(([k,v])=>{const [a,b]=v.t.split("：");
+          return `<div><span class="k"><i class="rchip">${k}</i>${esc(a)}</span><span class="v">${esc(b)}</span></div>`;}).join("")}
+        <div class="tot"><span class="k">いずれか1本でも該当 → 要確認</span><span class="v">34件</span></div>
+      </div>
+      <p class="note" data-n="L">ルールを1本のスコアに統合していません。統合すると精度は上がるかもしれませんが、<b>「なぜこの事業所が出たのか」を担当者に説明できなくなります</b>。どのルールで引っかかったかが一覧に出ていれば、担当者は自分の実感と突き合わせて「R2は毎月出るから見なくていい」といった判断ができます。しきい値の調整は、その会話の中でやるものだと思っています。</p>
+    </div>
+
+    <div class="card">
+      <h4>除外・補正<span class="r">誤検出を減らすための設定</span></h4>
+      <div class="kv">
+        <div><span class="k">賞与・処遇改善一時金の支給月</span><span class="v">経常ベースを併算</span></div>
+        <div><span class="k">開設1年未満の事業所</span><span class="v">自己水準比較から除外</span></div>
+        <div><span class="k">n &lt; 15 のセグメント</span><span class="v">上位区分へマージ</span></div>
+        <div><span class="k">PL⇔賃金台帳が不一致</span><span class="v">判定対象から除外</span></div>
+        <div><span class="k">休止・移転月</span><span class="v">前月比の判定を停止</span></div>
+      </div>
+      <p class="note" data-n="M">誤検出を放置すると、担当者は3か月で一覧を見なくなります。<b>この表は「精度」の話ではなく「使い続けてもらえるか」の話です。</b>運用が始まってから、実際に出た誤検出をここに1行ずつ足していく前提で、コードではなく設定として持ちます。</p>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   描画とイベント
+   ============================================================ */
+function render(){
+  const html = {scan:viewScan, detail:viewDetail, batch:viewBatch, param:viewParam}[state.view]();
+  $("#main").innerHTML = html;
+  document.querySelectorAll(".nav").forEach(b=>b.setAttribute("aria-current", String(b.dataset.go===state.view)));
+  if(state.view==="detail"){ drawPeer(); drawWf(); drawHb(); }
+  if(state.view==="scan"){
+    const sel = $("#svcSel");
+    if(sel) sel.addEventListener("change", e=>{ state.svcFilter = e.target.value; render(); });
+  }
+}
+function go(v){ state.view=v; render(); window.scrollTo({top:document.querySelector(".stage").offsetTop-14, behavior:"smooth"}); }
+
+document.addEventListener("click", e=>{
+  const nav = e.target.closest("[data-go]");
+  if(nav){ go(nav.dataset.go); return; }
+  if(e.target.closest("#noteBtn")){
+    state.notes = !state.notes;
+    document.body.classList.toggle("notes-on", state.notes);
+    $("#noteBtn").setAttribute("aria-pressed", String(state.notes));
+    return;
+  }
+  const row = e.target.closest("[data-hit]");
+  if(row){ state.sel = row.dataset.hit; go("detail"); }
+});
+
+render();
+</script>
+
+</body>
+</html>

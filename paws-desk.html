@@ -1,0 +1,917 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>PAWS DESK</title>
+
+</head>
+<body>
+<div style="position:fixed;right:12px;bottom:12px;z-index:60"><a href="./" style="display:inline-block;background:#0E6B5C;color:#fff;font:700 13px/1 sans-serif;padding:10px 14px;border-radius:999px;text-decoration:none">← 資料一式</a></div>
+<title>PAWS DESK</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: 上に店舗バー、下にタブ。各タブは「要約→明細」の順。色は深緑（主）＋琥珀（副）、赤は警告だけ */
+:root{
+  --bg:#FAFAF8; --surface:#FFFFFF; --sunk:#F1F4F2; --ink:#1B2430; --ink2:#4B5563; --ink3:#6B7280;
+  --line:#DCE2DF; --line2:#EBEFED;
+  --blue:#0E6B5C; --yellow:#D08A2E; --yellow-ink:#8A5512; --red:#B42318;
+  --ok:#2F6B2F; --ok-bg:#EAF3E6; --warn-bg:#FBF2E4; --bad-bg:#FBEAE8; --blue-bg:#E6F2EF;
+  --f-display:'Zen Kaku Gothic New','Hiragino Sans','Yu Gothic',sans-serif;
+  --f-body:'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif;
+  --f-mono:'JetBrains Mono',Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#101716; --surface:#16201E; --sunk:#1C2825; --ink:#E8EEEC; --ink2:#B3C1BD; --ink3:#86958F;
+  --line:#2C3A37; --line2:#222E2B; --blue:#5CC2AE; --yellow:#E3A857; --yellow-ink:#EDBB72; --red:#F2776B;
+  --ok:#7FC98A; --ok-bg:#183020; --warn-bg:#33270F; --bad-bg:#3A1A18; --blue-bg:#14302B; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101716; --surface:#16201E; --sunk:#1C2825; --ink:#E8EEEC; --ink2:#B3C1BD; --ink3:#86958F;
+  --line:#2C3A37; --line2:#222E2B; --blue:#5CC2AE; --yellow:#E3A857; --yellow-ink:#EDBB72; --red:#F2776B;
+  --ok:#7FC98A; --ok-bg:#183020; --warn-bg:#33270F; --bad-bg:#3A1A18; --blue-bg:#14302B; color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.65;margin:0}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:20px;padding-block:0 64px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0}
+p{margin:0}
+button,select,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+/* top bar */
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line);border-top:3px solid var(--blue)}
+.bar{max-width:1240px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--f-display);font-weight:900;font-size:20px;letter-spacing:.04em;display:flex;align-items:center;gap:8px}
+.logo svg{width:22px;height:22px}
+.store{display:flex;align-items:center;gap:8px;color:var(--ink2)}
+.store select{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:4px 8px}
+.date{color:var(--ink2)}
+.spacer{flex:1}
+.badge-demo{font-size:12px;border:1px solid var(--red);color:var(--red);border-radius:4px;padding:1px 8px;font-weight:700}
+.switch{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-weight:700;font-size:13px}
+.switch input{appearance:none;width:38px;height:22px;border-radius:11px;background:var(--line);position:relative;cursor:pointer;margin:0;transition:background .2s}
+.switch input::after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:var(--surface);transition:left .2s}
+.switch input:checked{background:var(--yellow)}
+.switch input:checked::after{left:19px}
+
+.tabs{max-width:1240px;margin:0 auto;padding:0 20px;display:flex;gap:4px;overflow-x:auto}
+.tab{background:none;border:0;border-bottom:3px solid transparent;padding:10px 14px;cursor:pointer;font-weight:700;color:var(--ink3);white-space:nowrap;font-size:14px}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--blue)}
+.tab .cnt{display:inline-block;min-width:20px;padding:0 6px;margin-left:6px;border-radius:10px;background:var(--red);color:#fff;font-size:11px;line-height:18px;text-align:center}
+
+section.view{padding-top:28px;display:flex;flex-direction:column;gap:24px}
+.head{display:flex;flex-direction:column;gap:6px}
+.eyebrow{font-size:12px;font-weight:700;color:var(--blue);letter-spacing:.12em}
+.head h2{font-size:26px;font-weight:900}
+.head p{color:var(--ink2);max-width:70ch}
+
+/* cards */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px;min-width:0}
+.card h3{font-size:16px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card h3 .sub{font-family:var(--f-body);font-weight:400;font-size:12px;color:var(--ink3)}
+.grid{display:grid;gap:16px}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g2{grid-template-columns:1.35fr 1fr}
+.g2e{grid-template-columns:1fr 1fr}
+@media (max-width:980px){.g4{grid-template-columns:repeat(2,1fr)}.g2,.g2e{grid-template-columns:1fr}}
+@media (max-width:480px){.g4{grid-template-columns:1fr}}
+
+.kpi{display:flex;flex-direction:column;gap:4px;padding:16px 18px;border-left:3px solid var(--blue)}
+.kpi.y{border-left-color:var(--yellow)}.kpi.r{border-left-color:var(--red)}
+.kpi .lab{font-size:12px;color:var(--ink3);font-weight:700}
+.kpi .val{font-family:var(--f-mono);font-size:28px;font-weight:700;line-height:1.2}
+.kpi .val small{font-size:14px;color:var(--ink3);font-family:var(--f-body);margin-left:4px}
+.kpi .note{font-size:12px;color:var(--ink2)}
+
+/* pills */
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;border-radius:4px;padding:1px 8px;white-space:nowrap;border:1px solid transparent}
+.p-ok{background:var(--ok-bg);color:var(--ok)}
+.p-warn{background:var(--warn-bg);color:var(--yellow-ink)}
+.p-bad{background:var(--bad-bg);color:var(--red)}
+.p-blue{background:var(--blue-bg);color:var(--blue)}
+.p-line{border-color:var(--line);color:var(--ink2)}
+
+/* table */
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-size:12px;color:var(--ink3);font-weight:700;border-bottom:2px solid var(--blue);padding:6px 8px;white-space:nowrap}
+td{border-bottom:1px solid var(--line2);padding:8px;vertical-align:middle}
+tr.flag td:first-child{box-shadow:inset 3px 0 0 var(--red)}
+tr.soon td:first-child{box-shadow:inset 3px 0 0 var(--yellow)}
+
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:700;font-size:13px}
+.btn:hover{border-color:var(--blue);color:var(--blue)}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.primary:hover{filter:brightness(1.1);color:#fff}
+:root[data-theme="dark"] .btn.primary{color:#0D1422}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.primary{color:#0D1422}}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.sm{padding:3px 8px;font-size:12px}
+
+/* explain mode */
+.explain{display:none;border-left:3px solid var(--yellow);background:var(--warn-bg);padding:10px 14px;border-radius:0 6px 6px 0;font-size:13px;color:var(--ink);line-height:1.7}
+.explain b{color:var(--yellow-ink)}
+body.explain-on .explain{display:block}
+
+/* chart */
+.chart svg{width:100%;height:auto;display:block}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--ink2);margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+
+/* line report */
+.phone{background:var(--sunk);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.bubble{background:var(--surface);border:1px solid var(--line);border-radius:4px 14px 14px 14px;padding:10px 12px;white-space:pre-wrap;font-size:13px;line-height:1.7}
+.bubble-meta{font-size:11px;color:var(--ink3)}
+
+.alert-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line2);flex-wrap:wrap}
+.alert-row:last-child{border-bottom:0}
+.alert-row .who{flex:1;min-width:160px}
+.alert-row .who b{font-size:14px}
+.alert-row .who span{color:var(--ink3);font-size:12px;display:block}
+.draftbox{width:100%;background:var(--sunk);border-radius:6px;padding:10px 12px;white-space:pre-wrap;font-size:13px;margin-top:4px}
+
+/* inbox */
+.inbox{display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start}
+@media (max-width:900px){.inbox{grid-template-columns:1fr}}
+.msgs{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.msg{display:flex;flex-direction:column;gap:4px;padding:12px 14px;border:0;border-bottom:1px solid var(--line2);background:none;text-align:left;cursor:pointer;width:100%}
+.msg:last-child{border-bottom:0}
+.msg:hover{background:var(--sunk)}
+.msg[aria-current="true"]{background:var(--blue-bg);box-shadow:inset 3px 0 0 var(--blue)}
+.msg .row1{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.msg .from{font-weight:700;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msg .ch{font-size:11px;color:var(--ink3)}
+.msg .preview{font-size:12px;color:var(--ink2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.detail{display:flex;flex-direction:column;gap:14px}
+.detail .body{white-space:pre-wrap;background:var(--sunk);border-radius:8px;padding:14px;font-size:14px}
+textarea{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;resize:vertical;line-height:1.7}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.status{font-size:12px;color:var(--ink3)}
+.status.err{color:var(--red)}
+.status.ai{color:var(--blue)}
+.mini{font-size:12px;color:var(--ink3)}
+details.kb summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--ink2)}
+details.kb pre{white-space:pre-wrap;font-family:var(--f-body);font-size:12px;background:var(--sunk);padding:10px 12px;border-radius:6px;margin:8px 0 0}
+
+/* studio */
+.studio{display:grid;grid-template-columns:420px 1fr;gap:16px;align-items:start}
+@media (max-width:980px){.studio{grid-template-columns:1fr}}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:var(--ink2)}
+select.in,input.in{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 10px;width:100%}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);border-radius:999px;padding:3px 12px;font-size:12px;cursor:pointer;background:var(--surface)}
+.chip[aria-pressed="true"]{border-color:var(--blue);color:var(--blue);background:var(--blue-bg);font-weight:700}
+.rules{display:flex;flex-direction:column;gap:6px;counter-reset:r}
+.rules li{list-style:none;display:flex;gap:8px;font-size:13px;align-items:flex-start}
+.rules li::before{counter-increment:r;content:counter(r);font-family:var(--f-mono);font-weight:700;color:var(--blue);min-width:16px}
+.rules{padding:0;margin:0}
+.ig{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.ig-top{display:flex;align-items:center;gap:8px;padding:10px 12px;font-weight:700;font-size:13px}
+.ig-top .av{width:28px;height:28px;border-radius:50%;border:2px solid var(--yellow);display:grid;place-items:center}
+.ig-img{aspect-ratio:4/3;max-width:100%;background:var(--sunk);position:relative;display:grid;place-items:center;overflow:hidden}
+.ig-img canvas{position:absolute;inset:0;width:100%;height:100%}
+.ig-img .hook{position:relative;font-family:var(--f-display);font-weight:900;font-size:clamp(18px,2.4vw,26px);text-align:center;padding:0 28px;line-height:1.4;background:var(--surface);border:2px solid var(--ink);padding:10px 18px;max-width:85%}
+.ig-cap{padding:12px 14px;white-space:pre-wrap;font-size:13px;line-height:1.8}
+.tags{display:flex;flex-wrap:wrap;gap:4px;padding:0 14px 14px}
+.tags span{color:var(--blue);font-size:12px}
+.out-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:760px){.out-grid{grid-template-columns:1fr}}
+.reel td:first-child{font-family:var(--f-mono);white-space:nowrap;color:var(--blue);font-weight:700}
+.checks{display:flex;flex-direction:column;gap:6px}
+.checks label{display:flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer}
+.checks input{margin-top:4px;accent-color:var(--blue)}
+.cal{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media (max-width:760px){.cal{grid-template-columns:repeat(2,1fr)}}
+.cal .day{border:1px solid var(--line);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:4px;min-width:0;background:var(--surface)}
+.cal .day .d{font-family:var(--f-mono);font-size:12px;color:var(--ink3)}
+.cal .day .t{font-weight:700;font-size:13px}
+.cal .day .h{font-size:12px;color:var(--ink2)}
+.source-tag{font-size:11px;font-weight:700;border-radius:3px;padding:0 6px}
+.src-ai{color:var(--blue);border:1px solid var(--blue)}
+.src-sample{color:var(--ink3);border:1px solid var(--line)}
+.thinking{display:inline-flex;gap:3px}
+.thinking i{width:5px;height:5px;border-radius:50%;background:var(--blue);animation:b 1s infinite}
+.thinking i:nth-child(2){animation-delay:.15s}.thinking i:nth-child(3){animation-delay:.3s}
+@keyframes b{0%,100%{opacity:.25}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.thinking i{animation:none}}
+
+/* estimator */
+.est{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+@media (max-width:900px){.est{grid-template-columns:1fr}}
+.slider{display:grid;grid-template-columns:1fr 92px;gap:4px 12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line2)}
+.slider:last-child{border-bottom:0}
+.slider label{font-size:13px;font-weight:700}
+.slider .v{font-family:var(--f-mono);text-align:right;font-weight:700}
+.slider input{grid-column:1/-1;width:100%;accent-color:var(--blue)}
+.slider .hint{grid-column:1/-1;font-size:11px;color:var(--ink3)}
+.big{font-family:var(--f-mono);font-weight:700;font-size:44px;line-height:1.1}
+.big small{font-size:16px;font-family:var(--f-body);color:var(--ink3);margin-left:4px}
+.res{display:flex;flex-direction:column;gap:4px;padding:16px 0;border-bottom:1px solid var(--line2)}
+.res:last-child{border-bottom:0}
+.bars{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.bars .b{display:grid;grid-template-columns:120px 1fr 64px;gap:8px;align-items:center;font-size:12px}
+.bars .track{height:10px;background:var(--sunk);border-radius:2px;position:relative;overflow:hidden}
+.bars .fill{position:absolute;left:0;top:0;bottom:0;background:var(--blue);border-radius:2px}
+.bars .b span:last-child{font-family:var(--f-mono);text-align:right}
+
+footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--ink3);display:flex;flex-direction:column;gap:4px}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:6px;font-size:13px;font-weight:700;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50}
+.toast.show{opacity:1}
+</style>
+
+<div class="topbar">
+  <div class="bar">
+    <div class="logo"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="15.5" rx="4.6" ry="3.8"/><circle cx="6" cy="9.5" r="1.9"/><circle cx="9.6" cy="5.8" r="1.9"/><circle cx="14.4" cy="5.8" r="1.9"/><circle cx="18" cy="9.5" r="1.9"/></g></svg>PAWS DESK</div>
+    <div class="store"><label for="storeSel" class="mini">店舗</label>
+      <select id="storeSel"><option value="all">LOBO 白金（カフェ＋ラン）</option></select></div>
+    <div class="date">2026年11月3日（火・祝 文化の日）</div>
+    <span class="badge-demo">デモ・架空データ</span>
+    <div class="spacer"></div>
+    <label class="switch" for="explainToggle"><input type="checkbox" id="explainToggle">解説モード</label>
+  </div>
+  <div class="tabs" role="tablist" aria-label="画面">
+    <button class="tab" role="tab" id="t-today" aria-controls="v-today" aria-selected="true">今日の店舗</button>
+    <button class="tab" role="tab" id="t-inbox" aria-controls="v-inbox" aria-selected="false" tabindex="-1">問い合わせ仕分け<span class="cnt" id="inboxCnt">8</span></button>
+    <button class="tab" role="tab" id="t-studio" aria-controls="v-studio" aria-selected="false" tabindex="-1">SNS工房</button>
+    <button class="tab" role="tab" id="t-est" aria-controls="v-est" aria-selected="false" tabindex="-1">時間の試算</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+<!-- ======================= 今日の店舗 ======================= -->
+<section class="view" id="v-today" role="tabpanel" aria-labelledby="t-today">
+  <div class="head">
+    <p class="eyebrow">今日の店舗</p>
+    <h2>開店前の5分で、今日やることが全部わかる。</h2>
+    <p>予約台帳・ワクチン証明・売上・問い合わせを1か所に集めた画面です。スタッフが毎朝ばらばらに確認している情報を、ここに集める想定です（この試作は架空データの表示のみで、実際の予約・LINEとはまだつないでいません）。</p>
+  </div>
+  <div class="explain"><b>解説：</b>実際の運用では、予約はGoogleフォーム、台帳はスプレッドシート、集計はGAS（Googleの無料の自動化機能）で作ります。この画面はそのスプレッドシートを見やすく表示したものです。<b>システムは無料枠を優先</b>して組み、AIの利用料など量によって費用がかかるものは事前にお見積りします。</div>
+
+  <div class="grid g4" id="kpis"></div>
+
+  <div class="grid g2">
+    <div class="card chart">
+      <h3>時間帯ごとの予約 <span class="sub">ドッグランは1時間あたり最大6頭（架空の設定）</span></h3>
+      <div id="hourChart"></div>
+      <div class="legend"><span><i style="background:var(--blue)"></i>ドッグラン</span><span><i style="background:var(--yellow)"></i>カフェ</span><span><i style="background:none;border:1px dashed var(--red)"></i>ラン上限</span></div>
+      <div class="explain" style="margin-top:12px"><b>解説：</b>予約が上限に達した時間帯は、フォームから自動で選べなくなります。電話やDMで「空いてますか？」と聞かれる回数そのものを減らすのが狙いです。</div>
+    </div>
+    <div class="card">
+      <h3>朝のLINEレポート <span class="sub">毎朝8:00に店長へ自動送信</span></h3>
+      <div class="phone"><div class="bubble-meta">PAWS DESK ・ 8:00</div><div class="bubble" id="lineReport"></div></div>
+      <div class="explain" style="margin-top:12px"><b>解説：</b>GASの時間トリガーで毎朝自動作成し、LINE公式アカウントから送ります。無料プランは月200通まで。店長1人に毎朝送るなら月30通ほどで収まります。</div>
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card">
+      <h3>本日の予約 <span class="sub" id="resvSub"></span></h3>
+      <div class="tbl-wrap"><table id="resvTbl"><thead><tr><th>時刻</th><th>わんちゃん</th><th>犬種・年齢</th><th>飼い主</th><th>利用</th><th>ワクチン証明</th></tr></thead><tbody></tbody></table></div>
+    </div>
+    <div class="card">
+      <h3>ワクチン証明の要対応 <span class="sub">期限切れ・30日以内・未提出</span></h3>
+      <div id="vacList"></div>
+      <div class="explain" style="margin-top:12px"><b>解説：</b>来店のたびに紙の証明書を確認するのをやめ、登録時に期限を1回だけ記録します。期限が近づくと、飼い主さんに送る連絡文がここに用意されます。<b>送るのは人</b>なので、誤送信の心配がありません。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= 問い合わせ仕分け ======================= -->
+<section class="view" id="v-inbox" role="tabpanel" aria-labelledby="t-inbox" hidden>
+  <div class="head">
+    <p class="eyebrow">問い合わせ仕分け</p>
+    <h2>Instagram・LINE・メールを一列に並べ、AIが仕分ける。</h2>
+    <p>届いた連絡を種類と優先度で分け、返信の下書きを用意します。外部からのSNS依頼は「商談」として別に拾うので、DMに埋もれません。</p>
+  </div>
+  <div class="explain"><b>解説：</b>ここが<b>キタオカさんの機会損失を止める画面</b>です。犬事業の連絡とSNSの依頼が同じ受信箱に混ざっている場合、依頼の返事が遅れがちです。AIが先に分けておけば、キタオカさんは「商談」だけ見れば済みます。</div>
+  <div class="row">
+    <button class="btn" id="reclassBtn">AIで全件を仕分け直す</button>
+    <span class="status" id="reclassStatus" role="status" aria-live="polite">表示中の分類：あらかじめ用意した見本</span>
+  </div>
+  <div class="inbox">
+    <div class="msgs" id="msgList"></div>
+    <div class="card detail" id="msgDetail"></div>
+  </div>
+  <details class="kb card"><summary>AIに渡している店舗の基本情報（返信の下書きはこれを根拠に書きます）</summary><pre id="kbText"></pre></details>
+</section>
+
+<!-- ======================= SNS工房 ======================= -->
+<section class="view" id="v-studio" role="tabpanel" aria-labelledby="t-studio" hidden>
+  <div class="head">
+    <p class="eyebrow">SNS工房</p>
+    <h2>今日の出来事を一行書けば、投稿の下書きができる。</h2>
+    <p>「型」に沿ってAIが投稿文・リール台本・ハッシュタグを作ります。キタオカさんは表現の監修に集中でき、素材の整理や修正対応はこちらで受け持ちます。</p>
+  </div>
+  <div class="explain"><b>解説：</b>左下の「型」は仮のものです。ヒアリングでキタオカさんの勝ちパターンを聞き取り、ここを差し替えると、AIの書く文章がキタオカさんの書き方に近づきます。<b>型を持っているのはキタオカさん</b>なので、AIに仕事を奪われるのではなく、キタオカさんの分身が増える形です。</div>
+  <div class="studio">
+    <div class="card" style="display:flex;flex-direction:column;gap:14px">
+      <h3 style="margin:0">素材</h3>
+      <label class="f" for="evt">今日の出来事
+        <textarea id="evt" rows="4">ハスキーのソラくん（3歳・男の子）が今日はじめてドッグランデビュー。最初の10分は入口で固まっていたけど、同じハスキーのルナちゃんに誘われてから全力で走り回り、帰るころには飼い主さんのほうが名残惜しそうだった。</textarea></label>
+      <div class="f"><span>目的</span><div class="chips" id="goalChips"></div></div>
+      <div class="f"><span>媒体</span><p class="mini">Instagram投稿＋リール（X・Googleビジネスは、媒体ごとの型を決めてから追加します）</p></div>
+      <label class="f" for="tone">トーン
+        <select id="tone" class="in"><option>あたたかく、少しユーモア</option><option>落ち着いて上品に</option><option>元気よく、テンポ重視</option></select></label>
+      <div class="f"><span>型（仮）― ヒアリング後にキタオカさんの型へ差し替え</span>
+        <ol class="rules" id="rules"></ol></div>
+      <div class="row">
+        <button class="btn primary" id="genBtn">AIで下書きを作る</button>
+        <button class="btn" id="stopBtn" hidden>止める</button>
+        <button class="btn" id="resetBtn" hidden>見本に戻す</button>
+      </div>
+      <p class="status" id="genStatus" role="status" aria-live="polite"></p>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+      <div class="row"><span id="outSource" class="source-tag src-sample">見本</span><span class="mini" id="outNote">AIを使わない状態でも流れが分かるよう、見本の出力を表示しています。</span></div>
+      <div class="out-grid">
+        <div class="ig">
+          <div class="ig-top"><span class="av"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="15.5" rx="4.6" ry="3.8"/><circle cx="6" cy="9.5" r="1.9"/><circle cx="9.6" cy="5.8" r="1.9"/><circle cx="14.4" cy="5.8" r="1.9"/><circle cx="18" cy="9.5" r="1.9"/></g></svg></span>lobo_dogcafe_demo</div>
+          <div class="ig-img"><canvas id="igCanvas" aria-hidden="true"></canvas><p class="hook" id="outHook"></p></div>
+          <p class="ig-cap" id="outCaption"></p>
+          <div class="tags" id="outTags"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+          <div class="card">
+            <h3>リール台本 <span class="sub">15秒</span></h3>
+            <div class="tbl-wrap"><table class="reel"><thead><tr><th>秒</th><th>映像</th><th>テロップ</th></tr></thead><tbody id="outReel"></tbody></table></div>
+          </div>
+          <div class="card">
+            <h3>投稿のおすすめ時間</h3>
+            <p id="outTime" style="font-weight:700"></p>
+            <p class="mini" id="outWhy" style="margin-top:6px"></p>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>監修チェック <span class="sub">キタオカさんが最後に見るところ</span></h3>
+        <div class="checks" id="outChecks"></div>
+        <div class="row" style="margin-top:12px"><button class="btn" id="copyBtn">投稿文をコピー</button></div>
+      </div>
+      <div class="card">
+        <h3>1か月の投稿カレンダー <span class="sub">型に沿って12本を一度に計画</span></h3>
+        <div class="row" style="margin-bottom:12px"><button class="btn" id="calBtn">AIで12本の計画を作る</button><span class="status" id="calStatus" role="status" aria-live="polite"></span></div>
+        <div class="cal" id="cal"></div>
+        <div class="explain" style="margin-top:12px"><b>解説：</b>お客さまごとにこの計画を作れば、1社あたりの企画の時間を大きく減らせます。ステップ②の「投稿原稿の制作」メニューは、この画面をお客さまごとに用意する形です。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= 時間の試算 ======================= -->
+<section class="view" id="v-est" role="tabpanel" aria-labelledby="t-est" hidden>
+  <div class="head">
+    <p class="eyebrow">時間の試算</p>
+    <h2>浮いた時間で、SNSの依頼を何件受けられるか。</h2>
+    <p>つまみを動かすと結果が変わります。初期値はすべて仮の値です。ヒアリングで実際の件数を入れて、一緒に計算し直します。</p>
+  </div>
+  <div class="explain"><b>解説：</b>ここは提案の場で冨士さん・キタオカさんに<b>その場で数字を入れていただく</b>ための画面です。私が決めた数字ではなく、お二人の実感で計算することに意味があります。</div>
+  <div class="est">
+    <div style="display:flex;flex-direction:column;gap:16px"><div class="card"><h3>いまの雑務 <span class="sub">1日あたり／営業日ベース</span></h3><div id="sliders"></div></div></div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="card">
+        <div class="res"><span class="mini">仕組みにして減らせる時間（月）</span><span class="big" id="rHours">0<small>時間</small></span><div class="bars" id="rBars"></div></div>
+        <div class="res"><span class="mini">SNSに回せる時間で、追加で持てる案件</span><span class="big" id="rCases">0<small>件／月</small></span><span class="mini" id="rCasesNote"></span></div>
+        <div class="res"><span class="mini">受注できた場合の売上の目安（月）</span><span class="big" id="rYen">¥0</span><span class="mini">仮の単価で計算した参考値で、利益ではありません。実際の金額はキタオカさんの相場で決めます。</span></div>
+      </div>
+      <div class="card"><h3>SNS案件の前提 <span class="sub">仮の値</span></h3><div id="sliders2"></div></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span>PAWS DESK は協業提案のための試作です。店舗名・わんちゃん・飼い主・売上・問い合わせの内容はすべて架空です。</span>
+  <span>この公開版では「AIで〜」のボタンはAIにつながらず、あらかじめ用意した見本を表示します。本番では、その場でAIが文章を作ります。</span>
+</footer>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const TODAY = new Date(2026, 10, 3);
+const DAY = 86400000;
+const toast = msg => { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 1800); };
+async function copyText(text, el) {
+  try { await navigator.clipboard.writeText(text); toast("コピーしました"); }
+  catch {
+    if (el && el.tagName === "TEXTAREA" && el.value === text) { el.focus(); el.select(); }
+    else if (el) {
+      document.querySelectorAll(".copy-fallback").forEach(x => x.remove());
+      const ta = document.createElement("textarea"); ta.className = "in copy-fallback"; ta.readOnly = true; ta.rows = 6; ta.value = text;
+      ta.style.cssText = "width:100%;margin-top:8px"; ta.setAttribute("aria-label", "コピーする全文");
+      el.after(ta); ta.focus(); ta.select();
+    }
+    toast("コピーできませんでした。選択中の全文を手動でコピーしてください");
+  }
+}
+
+/* ---------- 解説モード・タブ ---------- */
+const ex = $("#explainToggle");
+try { ex.checked = localStorage.getItem("paws-explain") === "1"; } catch {}
+const applyEx = () => { document.body.classList.toggle("explain-on", ex.checked); try { localStorage.setItem("paws-explain", ex.checked ? "1" : "0"); } catch {} };
+ex.addEventListener("change", applyEx); applyEx();
+const tabs = [...document.querySelectorAll(".tab")];
+function openTab(id) {
+  tabs.forEach(t => { const on = t.id === id; t.setAttribute("aria-selected", on); t.tabIndex = on ? 0 : -1; $("#" + t.getAttribute("aria-controls")).hidden = !on; });
+  try { localStorage.setItem("paws-tab", id); } catch {}
+  if (id === "t-studio") drawCanvas();
+}
+tabs.forEach(t => t.addEventListener("click", () => openTab(t.id)));
+$(".tabs").addEventListener("keydown", e => {
+  const i = tabs.indexOf(document.activeElement); if (i < 0) return;
+  const j = { ArrowRight: (i + 1) % tabs.length, ArrowLeft: (i - 1 + tabs.length) % tabs.length, Home: 0, End: tabs.length - 1 }[e.key];
+  if (j == null) return; e.preventDefault(); openTab(tabs[j].id); tabs[j].focus();
+});
+const hashMap = { today: "t-today", inbox: "t-inbox", studio: "t-studio", est: "t-est" };
+let startTab = hashMap[location.hash.slice(1)];
+if (!startTab) { try { startTab = localStorage.getItem("paws-tab"); } catch {} }
+if (startTab && $("#" + startTab)) openTab(startTab);
+
+/* ---------- データ（架空） ---------- */
+const STORE = {
+  name: "LOBO DOG CAFE 白金（架空）",
+  hours: "10:00〜19:00（ラストオーダー18:30）",
+  closed: "水曜日",
+  run: "ドッグラン：1頭1時間1,500円、延長30分ごと500円。大型犬エリアと小型犬エリアに分かれています。",
+  cafe: "カフェ：同伴OK。わんちゃん用メニューあり（ささみプレート780円など）。",
+  rule: "入場条件：狂犬病予防注射と混合ワクチンの接種証明（接種から1年以内）。証明は写真での提示もOK。ヒート中・体調不良のわんちゃんはご遠慮いただいています。",
+  reserve: "予約：Instagramのプロフィールにある予約フォームから。前日20時まで変更可。",
+  access: "アクセス：最寄り駅から徒歩8分。駐車場なし（近隣コインパーキングあり）。"
+};
+
+$("#kbText").textContent = "店舗名：" + STORE.name + "\n営業時間：" + STORE.hours + "\n定休日：" + STORE.closed + "\n" + [STORE.run, STORE.cafe, STORE.rule, STORE.reserve, STORE.access].join("\n");
+
+const RESV = [
+  ["10:00","ソラ","シベリアン・ハスキー",3,"青木","ラン","2027-04-12"],
+  ["10:00","こむぎ","柴犬",5,"井上","カフェ","2027-02-01"],
+  ["10:30","ルナ","シベリアン・ハスキー",2,"上田","ラン","2026-11-10"],
+  ["11:00","マロン","トイ・プードル",8,"江口","カフェ","2027-06-20"],
+  ["11:00","ゴン","ゴールデン・レトリーバー",4,"大野","ラン","2027-01-15"],
+  ["11:30","ユキ","サモエド",1,"加藤","ラン",null],
+  ["12:00","クロ","黒柴",6,"木村","カフェ","2027-03-03"],
+  ["12:00","アポロ","アラスカン・マラミュート",4,"工藤","ラン","2027-05-30"],
+  ["12:00","ベル","シベリアン・ハスキー",3,"長谷川","ラン","2027-03-21"],
+  ["13:00","ハル","シベリアン・ハスキー",7,"小林","ラン","2026-11-18"],
+  ["13:30","モカ","ミニチュア・ダックスフンド",10,"斎藤","カフェ","2027-08-08"],
+  ["14:00","レオ","ボーダー・コリー",3,"佐野","ラン","2027-02-22"],
+  ["14:00","ミント","ウェルシュ・コーギー",2,"清水","ラン","2027-07-01"],
+  ["14:00","リク","シベリアン・ハスキー",5,"森","ラン","2027-01-30"],
+  ["15:00","ナナ","シベリアン・ハスキー",5,"鈴木","ラン","2026-10-28"],
+  ["15:00","ポン","豆柴",3,"松本","カフェ","2027-05-11"],
+  ["16:00","チョコ","チワワ",2,"高橋","カフェ","2027-09-14"],
+  ["16:00","ジン","シベリアン・ハスキー",6,"山口","ラン","2027-02-09"],
+  ["17:00","テツ","秋田犬",6,"田中","ラン","2027-01-09"],
+  ["18:00","ココ","シベリアン・ハスキー",4,"中村","カフェ","2027-04-04"]
+].map(([t,name,breed,age,owner,kind,vac]) => ({t,name,breed,age,owner,kind,vac}));
+const vacState = r => {
+  if (!r.vac) return { k: "missing", label: "未提出", cls: "p-bad", days: null };
+  const d = Math.round((new Date(r.vac) - TODAY) / DAY);
+  if (d < 0) return { k: "expired", label: `期限切れ（${-d}日前）`, cls: "p-bad", days: d };
+  if (d <= 30) return { k: "soon", label: `あと${d}日`, cls: "p-warn", days: d };
+  return { k: "ok", label: "OK", cls: "p-ok", days: d };
+};
+RESV.forEach(r => r.vs = vacState(r));
+
+/* 売上（架空・千円）。水曜定休 */
+const SALES = (() => { const vals = [121,0,118,133,205,221,126,119,0,124,141,238,229,138]; return vals.map((v, i) => { const d = new Date(TODAY - (14 - i) * DAY); return { d, v: d.getDay() === 3 ? 0 : v }; }); })();
+
+const MSGS = [
+  { id: 1, ch: "Instagram DM", from: "@hana_and_kuu", time: "7:42", cat: "予約変更", pri: "中",
+    body: "おはようございます！今日10時からドッグランを予約している青木です。11時からに変更ってできますか？🙏",
+    draft: "おはようございます、青木さま。ご連絡ありがとうございます。\n本日のドッグランを11:00からに変更されたいとのこと、承知しました。\n当日のご変更のため、空き状況を確認して折り返しご連絡いたします。\n少々お待ちくださいませ。" },
+  { id: 2, ch: "LINE", from: "上田さま", time: "8:05", cat: "よくある質問", pri: "低",
+    body: "ワクチンの証明書、紙を忘れてしまいそうなんですがスマホの写真でも大丈夫ですか？",
+    draft: "上田さま、お問い合わせありがとうございます。\n証明書はスマホの写真でのご提示で大丈夫です。\nなお、ルナちゃんの混合ワクチンの証明は11月10日が期限となっております。次回の接種がお済みでしたら、あわせて写真をお見せいただけると助かります。" },
+  { id: 3, ch: "メール", from: "株式会社みなと住まい（架空）", time: "昨日 18:20", cat: "SNS依頼（商談）", pri: "高", deal: "スタンダード相当",
+    body: "突然のご連絡失礼いたします。ペット可の新築マンションを販売している会社です。\n御社のInstagramを拝見し、犬と暮らす楽しさの伝え方がとても魅力的だと感じました。\n当社のモデルルームのSNS運用（月8〜12投稿程度）をご相談できないでしょうか。",
+    draft: "株式会社みなと住まい ご担当者さま\n\nご連絡いただきありがとうございます。弊社の投稿をご覧いただき、大変うれしく思います。\nモデルルームのSNS運用につきまして、ぜひ詳しくお話を伺えればと存じます。\n\n一度30分ほどオンラインでお打ち合わせのお時間をいただけますでしょうか。\n候補日を2〜3つお知らせいただけましたら、担当のキタオカより改めてご連絡いたします。" },
+  { id: 4, ch: "予約フォーム", from: "斎藤さま", time: "昨日 21:10", cat: "要注意（ご不満）", pri: "高",
+    body: "先日カフェを利用しました。ドリンクが出てくるまで25分ほどかかり、その間うちの子が落ち着かず大変でした。混んでいたのは分かりますが、ひと声かけてほしかったです。",
+    draft: "斎藤さま\n\nこのたびはご不便をおかけし、誠に申し訳ございませんでした。\nお待たせしている間にお声がけすべきところ、それができておりませんでした。\nモカちゃんにも落ち着かない思いをさせてしまい、心よりお詫び申し上げます。\nいただいたお声は責任者に共有し、混雑時のご案内の仕方を確認したうえで、改めてご連絡いたします。" },
+  { id: 5, ch: "Instagram DM", from: "@trim_salon_mugi（架空）", time: "昨日 15:02", cat: "SNS依頼（商談）", pri: "高", deal: "ライト相当から",
+    body: "はじめまして、近くでトリミングサロンをしています。ビフォーアフターを載せているのですが全然伸びなくて…。どうやったらあんなに見てもらえるのか、一度相談に乗っていただけませんか？有料でも大丈夫です！",
+    draft: "はじめまして、メッセージありがとうございます！\nビフォーアフターは見せ方を少し変えるだけで、ぐっと見てもらえるようになることが多いです。\nまずはアカウントを拝見して、直すとよいところを1枚にまとめる「診断」からいかがでしょうか。\n詳しいご案内を担当のキタオカからお送りしますね。" },
+  { id: 6, ch: "LINE", from: "大野さま", time: "8:31", cat: "よくある質問", pri: "低",
+    body: "ゴールデンで体重が35kgあるんですが、ドッグランは大型犬でも大丈夫ですか？",
+    draft: "大野さま、お問い合わせありがとうございます。\nドッグランは大型犬エリアと小型犬エリアに分かれておりますので、35kgのゴンくんものびのび走っていただけます。\n本日11:00のご予約、お待ちしております。" },
+  { id: 7, ch: "メール", from: "月刊わんこと港区（架空）", time: "昨日 11:47", cat: "取材・PR", pri: "中",
+    body: "地域のペット情報誌の編集部です。12月号の「冬でも楽しめるドッグラン特集」でご紹介させていただけないでしょうか。写真撮影は30分ほどを予定しています。",
+    draft: "月刊わんこと港区 編集部さま\n\n取材のご依頼をいただき、ありがとうございます。ぜひお受けしたく存じます。\n撮影のご希望日程を2〜3つお知らせいただけますでしょうか。\n担当より折り返しご連絡いたします。" },
+  { id: 8, ch: "Instagram DM", from: "@husky_love_77", time: "6:58", cat: "その他（人が対応）", pri: "中",
+    body: "いつも投稿楽しみにしています。ハスキーの里親を探しているのですが、そういう情報ってお店に集まったりしますか？",
+    draft: "いつもご覧いただきありがとうございます！\n里親さがしについて、当店でお手伝いできることがあるか、スタッフが確認してご連絡しますね。" },
+];
+const CATS = ["予約変更","よくある質問","SNS依頼（商談）","要注意（ご不満）","取材・PR","その他（人が対応）"];
+const catCls = c => c.startsWith("SNS") ? "p-blue" : c.startsWith("要注意") ? "p-bad" : c === "取材・PR" ? "p-warn" : "p-line";
+const priCls = p => p === "高" ? "p-bad" : p === "中" ? "p-warn" : "p-line";
+
+/* ---------- 今日の店舗 ---------- */
+const run = RESV.filter(r => r.kind === "ラン"), cafe = RESV.filter(r => r.kind === "カフェ");
+const needVac = RESV.filter(r => r.vs.k !== "ok").sort((a, b) => (a.vs.days ?? -999) - (b.vs.days ?? -999));
+const yest = SALES[SALES.length - 1], lastWeek = SALES[SALES.length - 8];
+const diffPct = Math.round((yest.v / lastWeek.v - 1) * 100);
+const highMsgs = MSGS.filter(m => m.pri === "高").length;
+const deals = MSGS.filter(m => m.cat.startsWith("SNS")).length;
+const RUN_CAP = 6, HOURS = [10,11,12,13,14,15,16,17,18];
+const spark = (() => {
+  const W = 120, H = 28, open = SALES.filter(s => s.v > 0), max = Math.max(...open.map(s => s.v));
+  let pts = SALES.map((s, i) => [i * W / (SALES.length - 1), s.v ? H - 2 - (s.v / max) * (H - 6) : null]);
+  let d = "", first = true;
+  pts.forEach(([x, y]) => { if (y == null) { first = true; return; } d += (first ? "M" : "L") + x.toFixed(1) + " " + y.toFixed(1) + " "; first = false; });
+  const [lx, ly] = pts[pts.length - 1];
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true"><path d="${d}" fill="none" stroke="var(--blue)" stroke-width="1.5"/><circle cx="${lx}" cy="${ly}" r="2.6" fill="var(--blue)"/></svg>`;
+})();
+$("#kpis").innerHTML = `
+  <div class="card kpi"><span class="lab">本日の予約</span><span class="val">${RESV.length}<small>件</small></span><span class="note">ドッグラン ${run.length}頭 ・ カフェ ${cafe.length}組（祝日）</span></div>
+  <div class="card kpi"><span class="lab">昨日の売上（${yest.d.getMonth()+1}/${yest.d.getDate()} 月）</span><span class="val">¥${(yest.v*1000).toLocaleString()}</span><span class="note" style="display:flex;align-items:center;gap:8px">${spark}<span>先週の同じ曜日より ${diffPct >= 0 ? "+" : ""}${diffPct}%</span></span></div>
+  <div class="card kpi r"><span class="lab">ワクチン証明の要対応</span><span class="val">${needVac.length}<small>頭</small></span><span class="note">期限切れ ${needVac.filter(r=>r.vs.k==="expired").length} ・ 未提出 ${needVac.filter(r=>r.vs.k==="missing").length} ・ 30日以内 ${needVac.filter(r=>r.vs.k==="soon").length}</span></div>
+  <div class="card kpi y"><span class="lab">未返信の連絡</span><span class="val">${MSGS.length}<small>件</small></span><span class="note">優先度・高 ${highMsgs}件（うちSNSの商談 ${deals}件）</span></div>`;
+
+(function hourChart() {
+  const W = 640, H = 330, L = 34, R = 10, T = 14, B = 30, max = 7;
+  const cw = (W - L - R) / HOURS.length, bw = cw * 0.32;
+  const y = v => T + (H - T - B) * (1 - v / max);
+  let g = "";
+  for (let v = 0; v <= max; v += 1) g += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line2)"/><text x="${L-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--ink3)">${v}</text>`;
+  g += `<line x1="${L}" x2="${W-R}" y1="${y(RUN_CAP)}" y2="${y(RUN_CAP)}" stroke="var(--red)" stroke-dasharray="4 4"/>`;
+  HOURS.forEach((h, i) => {
+    const hh = String(h).padStart(2, "0");
+    const rc = run.filter(r => r.t.startsWith(hh)).length, cc = cafe.filter(r => r.t.startsWith(hh)).length;
+    const x = L + i * cw + cw / 2;
+    g += `<rect x="${x - bw - 1}" y="${y(rc)}" width="${bw}" height="${y(0) - y(rc)}" fill="var(--blue)" rx="2"><title>${h}時台 ドッグラン ${rc}頭</title></rect>`;
+    g += `<rect x="${x + 1}" y="${y(cc)}" width="${bw}" height="${y(0) - y(cc)}" fill="var(--yellow)" rx="2"><title>${h}時台 カフェ ${cc}組</title></rect>`;
+    if (rc) g += `<text x="${x - bw/2 - 1}" y="${y(rc) - 4}" text-anchor="middle" font-size="11" fill="var(--ink2)">${rc}</text>`;
+    g += `<text x="${x}" y="${H - 10}" text-anchor="middle" font-size="11" fill="var(--ink3)">${h}時</text>`;
+  });
+  g += `<text x="${W-R}" y="${y(RUN_CAP)-5}" text-anchor="end" font-size="11" fill="var(--red)">上限 ${RUN_CAP}頭</text>`;
+  $("#hourChart").innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="時間帯ごとの予約数">${g}</svg>`;
+})();
+
+$("#resvSub").textContent = `${RESV.length}件 ・ 要対応のわんちゃんに色の印`;
+$("#resvTbl tbody").innerHTML = RESV.map(r => `<tr class="${r.vs.k === "ok" ? "" : r.vs.k === "soon" ? "soon" : "flag"}">
+  <td class="num">${r.t}</td><td><b>${esc(r.name)}</b></td><td>${esc(r.breed)}・${r.age}歳</td><td style="white-space:nowrap">${esc(r.owner)}さま</td>
+  <td><span class="pill ${r.kind === "ラン" ? "p-blue" : "p-warn"}">${r.kind}</span></td><td><span class="pill ${r.vs.cls}">${r.vs.label}</span></td></tr>`).join("");
+
+const vacMsg = r => {
+  const md = r.vac ? `${+r.vac.slice(5,7)}月${+r.vac.slice(8,10)}日` : "";
+  if (r.vs.k === "missing") return `${r.owner}さま\n本日${r.t}からのご予約ありがとうございます。\n${r.name}ちゃんのワクチン接種証明（狂犬病・混合）がまだ登録されていないようです。\nご来店時にスマホの写真でご提示いただければ大丈夫です。どうぞよろしくお願いいたします。`;
+  if (r.vs.k === "expired") return `${r.owner}さま\n本日${r.t}からのご予約ありがとうございます。\n${r.name}ちゃんの混合ワクチン証明が${md}で期限を過ぎているようです。\nすでに接種がお済みでしたら、新しい証明書の写真をご来店時にお見せください。\n未接種の場合はドッグランのご利用をお控えいただいております。カフェのみのご利用への変更も承りますので、お気軽にご返信ください。`;
+  return `${r.owner}さま\nいつもありがとうございます。\n${r.name}ちゃんの混合ワクチン証明が${md}に期限を迎えます。\n次回の接種がお済みになりましたら、写真をLINEでお送りいただけると、ご来店時の確認がスムーズです。`;
+};
+$("#vacList").innerHTML = needVac.map((r, i) => `<div class="alert-row">
+  <div class="who"><b>${esc(r.name)}</b>（${esc(r.breed)}）<span>${esc(r.owner)}さま ・ 本日 ${r.t} ${r.kind}</span></div>
+  <span class="pill ${r.vs.cls}">${r.vs.label}</span>
+  <button class="btn sm" data-vac="${i}" aria-expanded="false">連絡文を見る</button>
+  <div class="draftbox" id="vd${i}" hidden></div></div>`).join("");
+$("#vacList").addEventListener("click", e => {
+  const b = e.target.closest("[data-vac]"); if (!b) return;
+  const i = +b.dataset.vac, box = $("#vd" + i), open = box.hidden;
+  if (open && !box.textContent) { box.textContent = vacMsg(needVac[i]); const c = document.createElement("button"); c.className = "btn sm"; c.textContent = "コピー"; c.style.marginTop = "8px"; c.addEventListener("click", () => copyText(vacMsg(needVac[i]), box)); box.after(c); c.hidden = true; box._copy = c; }
+  box.hidden = !open; if (box._copy) box._copy.hidden = !open;
+  b.setAttribute("aria-expanded", open); b.textContent = open ? "閉じる" : "連絡文を見る";
+});
+
+const busiest = HOURS.map(h => [h, run.filter(r => r.t.startsWith(String(h).padStart(2,"0"))).length]).sort((a,b) => b[1]-a[1])[0];
+$("#lineReport").textContent =
+`おはようございます。11/3（火・祝）の予定です。
+
+■予約 ${RESV.length}件（ラン${run.length}頭・カフェ${cafe.length}組）
+いちばん混むのは ${busiest[0]}時台（ラン${busiest[1]}頭）
+
+■受付で確認すること
+${needVac.map(r => `・${r.t} ${r.name}ちゃん：ワクチン${r.vs.k === "missing" ? "証明が未提出" : r.vs.k === "expired" ? "期限切れ" : r.vs.label}`).join("\n")}
+
+■昨日の売上 ¥${(yest.v*1000).toLocaleString()}（先週の同じ曜日より${diffPct >= 0 ? "+" : ""}${diffPct}%）
+
+■未返信 ${MSGS.length}件
+うち急ぎ${highMsgs}件：ご不満1件、SNSの商談${deals}件
+→ 商談はキタオカさん宛てに分けてあります`;
+
+/* ---------- AI ---------- */
+let samplePromise = (window.claude && claude.use) ? claude.use("sample").catch(() => null) : Promise.resolve(null);
+const errCopy = e => ({
+  not_granted: "AIの利用が許可されていないため、作り直せませんでした。表示中の内容はそのままです。",
+  sampling_disabled: "このアカウントではAIが使えないため、作り直せませんでした。表示中の内容はそのままです。",
+  rate_limited: "AIの利用が混み合っています。少し時間をおいて、もう一度押してください。",
+  session_expired: "Claudeに再ログインしてから、もう一度押してください。",
+  invalid_json: "AIの返答をうまく読み取れませんでした。もう一度押してください。",
+  refused: "この内容ではAIが書けませんでした。素材を少し変えてお試しください。",
+  cancelled: "止めました。"
+}[e?.code] || "AIにつながりませんでした。表示中の内容はそのままです。もう一度押してください。");
+const hideCodes = ["not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed"];
+
+/* ---------- 問い合わせ ---------- */
+let curMsg = MSGS[2].id, aiClassified = false;
+function renderMsgs() {
+  const order = { "高": 0, "中": 1, "低": 2 };
+  const list = [...MSGS].sort((a, b) => order[a.pri] - order[b.pri] || a.id - b.id);
+  $("#msgList").innerHTML = list.map(m => `<button class="msg" data-id="${m.id}" aria-current="${m.id === curMsg}">
+    <span class="row1"><span class="from">${esc(m.from)}</span><span class="ch">${esc(m.ch)} ・ ${esc(m.time)}</span></span>
+    <span class="row1"><span class="pill ${catCls(m.cat)}">${esc(m.cat)}</span><span class="pill ${priCls(m.pri)}">優先 ${m.pri}</span></span>
+    <span class="preview">${esc(m.body)}</span></button>`).join("");
+}
+function renderDetail() {
+  const m = MSGS.find(x => x.id === curMsg);
+  const isDeal = m.cat.startsWith("SNS");
+  $("#msgDetail").innerHTML = `
+    <div class="row"><span class="pill ${catCls(m.cat)}">${esc(m.cat)}</span><span class="pill ${priCls(m.pri)}">優先 ${m.pri}</span>${m.reason ? `<span class="mini">AIの判断理由：${esc(m.reason)}</span>` : ""}</div>
+    <div><h3 style="margin:0">${esc(m.from)}</h3><p class="mini">${esc(m.ch)} ・ ${esc(m.time)}</p></div>
+    <p class="body">${esc(m.body)}</p>
+    ${isDeal ? `<div style="border-left:3px solid var(--blue);padding:8px 12px;background:var(--blue-bg);border-radius:0 6px 6px 0;font-size:13px"><b>商談として扱います。</b> メニューの目安：${esc(m.deal || "要相談")} ・ 担当：キタオカさん<br><span class="mini">返信の下書きは「担当から改めて連絡」で止め、金額は書かない設定にしています。</span></div>` : ""}
+    <label class="f" for="replyBox">返信の下書き <span id="replySrc" class="source-tag ${m.edit != null || m.aiDraft ? "src-ai" : "src-sample"}" style="align-self:flex-start">${m.edit != null ? "手直し中" : m.aiDraft ? "AIが作成" : "見本"}</span></label>
+    <textarea id="replyBox" rows="8">${esc(m.edit ?? m.aiDraft ?? m.draft)}</textarea>
+    <div class="row"><button class="btn primary" id="replyAi">AIで下書きを作り直す</button><button class="btn" id="replyStop" hidden>止める</button><button class="btn" id="replyCopy">コピー</button><span class="status" id="replyStatus" role="status" aria-live="polite"></span></div>
+    <p class="mini">送信は人が確認してから行います。AIが勝手に送ることはありません。下書きは問い合わせごとに保持します。</p>`;
+  $("#replyBox").addEventListener("input", e => { m.edit = e.target.value; });
+  $("#replyCopy").onclick = () => copyText($("#replyBox").value, $("#replyBox"));
+  $("#replyAi").onclick = () => aiReply(m);
+}
+$("#msgList").addEventListener("click", e => { const b = e.target.closest(".msg"); if (!b) return; if (replyCtl) replyCtl.abort(); curMsg = +b.dataset.id; renderMsgs(); renderDetail(); });
+renderMsgs(); renderDetail();
+
+let replyCtl;
+async function aiReply(m) {
+  const st = $("#replyStatus"), box = $("#replyBox"), btn = $("#replyAi"), stop = $("#replyStop");
+  const sample = await samplePromise;
+  if (!sample) { st.className = "status err"; st.textContent = "この表示環境ではAIが使えないため、見本のままです。"; return; }
+  const ctl = replyCtl = new AbortController(); btn.disabled = true; stop.hidden = false; stop.onclick = () => ctl.abort();
+  const here = () => curMsg === m.id && ctl === replyCtl;
+  st.className = "status ai"; st.innerHTML = '考えています <span class="thinking"><i></i><i></i><i></i></span>';
+  const isDeal = m.cat.startsWith("SNS");
+  const prompt = `あなたはドッグカフェ兼ドッグラン「${STORE.name}」のスタッフです。届いた連絡への返信の下書きを日本語で書いてください。
+
+# 店舗の基本情報（これ以外の事実は書かない。分からないことは「確認してご連絡します」と書く）
+${$("#kbText").textContent}
+
+# この差出人の本日の予約（該当がなければ「なし」）
+${RESV.filter(r => m.from.includes(r.owner) || m.body.includes(r.owner)).map(r => `${r.t} ${r.name}（${r.breed}） ${r.kind} ワクチン:${r.vs.label}`).join("\n") || "なし"}
+
+# 連絡
+経路：${m.ch}
+差出人：${m.from}
+分類：${m.cat}
+本文：
+${m.body}
+
+# 書き方
+- ${m.ch === "メール" ? "メールらしい丁寧な文面" : "LINE・DMらしく、丁寧だが短め"}。3〜6文。
+- 予約の確定・料金の値引き・金額の提示など、店が判断すべきことは約束しない。
+- まだ行っていない処理（予約の変更・スタッフへの共有・手配など）を、済んだように書かない。
+${isDeal ? "- SNS運用の相談なので、感謝を伝え、詳しい話は担当のキタオカから改めて連絡すると書く。金額は書かない。" : ""}
+${m.cat.startsWith("要注意") ? "- まず心からお詫びし、言い訳をしない。再発防止策は決めつけず、「責任者に共有し、確認のうえ改めて連絡する」と書く。" : ""}
+- 返信本文だけを出力する（前置きや説明は不要）。`;
+  try {
+    const { text } = await sample(prompt, { signal: ctl.signal, cache: false, onText: ({ text }) => { if (here()) { box.value = text; st.textContent = "書いています…"; } } });
+    m.aiDraft = text.trim(); delete m.edit;
+    if (!here()) return;
+    box.value = m.aiDraft;
+    const src = $("#replySrc"); src.textContent = "AIが作成"; src.className = "source-tag src-ai";
+    st.className = "status ai"; st.textContent = "AIが下書きを作りました。内容を確認してから送ってください。";
+  } catch (e) {
+    if (hideCodes.includes(e.code)) samplePromise = Promise.resolve(null);
+    if (!here()) return;
+    if (e.text) { box.value = e.text; m.edit = e.text; }
+    st.className = "status err"; st.textContent = errCopy(e);
+  } finally { if (ctl === replyCtl) replyCtl = null; btn.disabled = false; stop.hidden = true; }
+}
+
+$("#reclassBtn").onclick = async () => {
+  const st = $("#reclassStatus"), btn = $("#reclassBtn");
+  const sample = await samplePromise;
+  if (!sample) { st.className = "status err"; st.textContent = "この表示環境ではAIが使えないため、見本の分類のままです。"; return; }
+  btn.disabled = true; st.className = "status ai"; st.innerHTML = 'AIが8件を読んでいます <span class="thinking"><i></i><i></i><i></i></span>';
+  const prompt = `ドッグカフェ兼ドッグランに届いた連絡を仕分けてください。
+分類は次のどれか一つ：${CATS.join(" / ")}
+優先度は 高・中・低 のどれか（ご不満と、売上につながる商談は高）。
+reason は判断理由を25字以内で。
+
+# 連絡
+${MSGS.map(m => `id:${m.id} 経路:${m.ch} 差出人:${m.from}\n${m.body}`).join("\n\n")}
+
+次の形のJSON配列だけを返してください：
+[{"id":1,"cat":"予約変更","pri":"中","reason":"…"}]`;
+  try {
+    const arr = await sample.json(prompt, { modelTier: "quick" });
+    let n = 0;
+    (Array.isArray(arr) ? arr : []).forEach(x => { const m = MSGS.find(y => y.id === Number(x.id)); if (!m) return;
+      if (CATS.includes(x.cat)) m.cat = x.cat; if (["高","中","低"].includes(x.pri)) m.pri = x.pri; m.reason = String(x.reason || "").slice(0, 40); n++; });
+    aiClassified = true; renderMsgs(); renderDetail();
+    st.className = "status ai"; st.textContent = `表示中の分類：AIが${n}件を仕分けました（理由は各連絡に表示）`;
+  } catch (e) {
+    st.className = "status err"; st.textContent = errCopy(e);
+    if (hideCodes.includes(e.code)) samplePromise = Promise.resolve(null);
+  } finally { btn.disabled = false; }
+};
+
+/* ---------- SNS工房 ---------- */
+const GOALS = ["来店を増やす","ドッグランを知ってもらう","新メニューの告知","イベントの集客"];
+const MEDIA = ["Instagram投稿＋リール"];
+let goal = GOALS[1], media = MEDIA[0];
+function chips(el, list, get, set) {
+  el.innerHTML = list.map(v => `<button class="chip" aria-pressed="${v === get()}">${esc(v)}</button>`).join("");
+  el.onclick = e => { const b = e.target.closest(".chip"); if (!b) return; set(b.textContent); chips(el, list, get, set); };
+}
+chips($("#goalChips"), GOALS, () => goal, v => goal = v);
+const RULES = [
+  "1行目は「続きが気になる」一文。結論や店名から始めない",
+  "主役はわんちゃん。店の宣伝は最後の1〜2行だけ",
+  "飼い主さんが共感する「あるある」を1つ入れる",
+  "最後に行動を1つだけお願いする（保存・予約・コメントのどれか）",
+  "ハッシュタグは8〜12個。地域・犬種・目的を混ぜる",
+  "絵文字は3つまで。医療・効果をうたう表現は使わない"
+];
+$("#rules").innerHTML = RULES.map(r => `<li>${esc(r)}</li>`).join("");
+
+const SAMPLE_OUT = {
+  hook: "入口で10分固まっていたソラくん。帰るころには…",
+  caption: "入口で10分固まっていたソラくん。帰るころには…\n\n今日はハスキーのソラくん（3歳）がドッグランデビュー🐾\n最初は入口から一歩も動けず、飼い主さんの足元にぴったり。\n\nそこへやって来たのが、同じハスキーのルナちゃん。\n鼻をちょんとつけて「いこ？」と誘ってくれてから、ソラくんのスイッチが入りました。\n\nあとはもう、全力疾走。\n最後は「もう帰るの？」という顔をしていたのは、ソラくんではなく飼い主さんのほうでした😂\n\nはじめての場所でかたまっちゃう子、多いですよね。\nうちの子もそうだった！という方、コメントで教えてください。\n\n大型犬エリアは、ハスキーたちがのびのび走れる広さです。\nご予約はプロフィールのリンクから。",
+  hashtags: ["#ドッグラン","#ドッグランデビュー","#シベリアンハスキー","#ハスキー","#ハスキー犬","#大型犬","#大型犬と暮らす","#白金","#港区ドッグラン","#犬のいる暮らし","#ドッグカフェ"],
+  reel: [
+    { sec: "0〜3秒", scene: "入口で固まるソラくんの後ろ姿", telop: "はじめてのドッグラン。10分動けませんでした" },
+    { sec: "3〜6秒", scene: "ルナちゃんが近づいて鼻をちょん", telop: "そこへ先輩ハスキーが…" },
+    { sec: "6〜12秒", scene: "2頭で全力疾走（スロー→等倍）", telop: "スイッチ、入りました" },
+    { sec: "12〜15秒", scene: "名残惜しそうな飼い主さんの手元", telop: "帰りたくないのは、どっち？" }
+  ],
+  best_time: "今日 20:00〜21:00（祝日の夜は、明日の予定を考える人が多い時間）",
+  why: "1行目で結末を隠し、最後まで読ませる構成にしました。デビューの不安は飼い主さんの共感が集まりやすいため、コメントを呼びかけています。",
+  check: ["ソラくんとルナちゃんの飼い主さんに、写真と名前の掲載許可を取ったか","「10分」「3歳」など事実の数字が合っているか","店舗のハッシュタグと地域名が正しいか","リールの音源が商用利用OKのものか"]
+};
+function renderOut(o, src) {
+  $("#outHook").textContent = o.hook || "";
+  $("#outCaption").textContent = o.caption || "";
+  $("#outTags").innerHTML = (o.hashtags || []).map(t => `<span>${esc(String(t).startsWith("#") ? t : "#" + t)}</span>`).join("");
+  $("#outReel").innerHTML = (o.reel || []).map(r => `<tr><td>${esc(r.sec)}</td><td>${esc(r.scene)}</td><td>${esc(r.telop)}</td></tr>`).join("");
+  $("#outTime").textContent = o.best_time || "";
+  $("#outWhy").textContent = o.why || "";
+  $("#outChecks").innerHTML = (o.check || []).map((c, i) => `<label for="ck${i}"><input type="checkbox" id="ck${i}">${esc(c)}</label>`).join("");
+  const s = $("#outSource");
+  s.textContent = src === "ai" ? "AIが作成" : "見本"; s.className = "source-tag " + (src === "ai" ? "src-ai" : "src-sample");
+  $("#outNote").textContent = src === "ai" ? "いま入力した素材と型から、AIが作りました。数字や名前は必ず確認してください。" : "AIを使わない状態でも流れが分かるよう、見本の出力を表示しています。";
+  drawCanvas();
+}
+let cur = SAMPLE_OUT; renderOut(cur, "sample");
+$("#copyBtn").onclick = () => copyText((cur.caption || "") + "\n\n" + (cur.hashtags || []).join(" "), $("#outCaption"));
+
+function drawCanvas() {
+  const c = $("#igCanvas"); if (!c || !c.offsetWidth) return;
+  const dpr = window.devicePixelRatio || 1, w = c.offsetWidth, h = c.offsetHeight;
+  c.width = w * dpr; c.height = h * dpr; const x = c.getContext("2d"); x.scale(dpr, dpr);
+  const cs = getComputedStyle(document.documentElement);
+  const cols = [cs.getPropertyValue("--blue"), cs.getPropertyValue("--yellow")].map(s => s.trim());
+  x.fillStyle = cs.getPropertyValue("--sunk").trim(); x.fillRect(0, 0, w, h);
+  let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  for (let i = 0; i < 22; i++) {
+    const px = rnd() * w, py = rnd() * h, s = 10 + rnd() * 14, a = rnd() * Math.PI * 2;
+    x.save(); x.translate(px, py); x.rotate(a); x.strokeStyle = cols[i % 2]; x.globalAlpha = .55; x.lineWidth = 1.6;
+    x.beginPath(); x.ellipse(0, s * .35, s * .5, s * .4, 0, 0, Math.PI * 2); x.stroke();
+    [[-.62,-.15],[-.24,-.55],[.24,-.55],[.62,-.15]].forEach(([dx, dy]) => { x.beginPath(); x.arc(dx * s, dy * s, s * .17, 0, Math.PI * 2); x.stroke(); });
+    x.restore();
+  }
+}
+addEventListener("resize", drawCanvas);
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", drawCanvas);
+
+const isStr = v => typeof v === "string" && v.trim() !== "";
+const validOut = o => o && typeof o === "object" && !Array.isArray(o)
+  && ["hook","caption","best_time","why"].every(k => isStr(o[k]))
+  && Array.isArray(o.hashtags) && o.hashtags.length > 0 && o.hashtags.every(isStr)
+  && Array.isArray(o.reel) && o.reel.length >= 2 && o.reel.every(r => r && isStr(r.sec) && isStr(r.scene) && isStr(r.telop))
+  && Array.isArray(o.check) && o.check.length > 0 && o.check.every(isStr);
+$("#resetBtn").onclick = () => { cur = SAMPLE_OUT; renderOut(cur, "sample"); $("#resetBtn").hidden = true; $("#genStatus").textContent = "見本に戻しました。"; };
+let genCtl;
+$("#genBtn").onclick = async () => {
+  const st = $("#genStatus"), btn = $("#genBtn"), stop = $("#stopBtn");
+  const evt = $("#evt").value.trim();
+  if (!evt) { st.className = "status err"; st.textContent = "今日の出来事を一行以上書いてください。"; return; }
+  const sample = await samplePromise;
+  if (!sample) { st.className = "status err"; st.textContent = "この表示環境ではAIが使えません。表示中の内容はそのままです。本番ではその場でAIが文章を作ります。"; return; }
+  genCtl = new AbortController(); btn.disabled = true; stop.hidden = false; stop.onclick = () => genCtl.abort();
+  st.className = "status ai"; st.innerHTML = 'AIが型に沿って考えています（20〜60秒ほど） <span class="thinking"><i></i><i></i><i></i></span>';
+  const prompt = `あなたは犬のお店のSNSを伸ばしてきたプロの編集者です。次の「型」を必ず守って、${media}の下書きを日本語で作ってください。
+
+# お店
+${STORE.name}（ドッグカフェ＋ドッグラン。ハスキーなど大型犬のお客さまが多い）
+${STORE.run}
+
+# 型（全部守る）
+${RULES.map((r, i) => `${i + 1}. ${r}`).join("\n")}
+
+# 今日の出来事（ここに書かれていない事実は足さない）
+${evt}
+
+# 目的：${goal}
+# トーン：${$("#tone").value}
+
+# 出力
+次のキーを持つJSONオブジェクトだけを返す。
+{"hook":"画像に載せる1行（25字以内）","caption":"投稿本文（改行は\\nで。200〜350字）","hashtags":["#…"],"reel":[{"sec":"0〜3秒","scene":"映像","telop":"テロップ（20字以内）"}],"best_time":"おすすめの投稿時間と理由（1文）","why":"この構成にした理由（2文）","check":["公開前に人が確認すべき点（3〜4個）"]}
+reel は合計15秒で3〜4行。`;
+  try {
+    let n = 0;
+    const o = await sample.json(prompt, { signal: genCtl.signal, cache: false, onText: ({ text }) => { n = text.length; st.textContent = `書いています… ${n}字`; } });
+    if (!validOut(o)) throw { code: "invalid_json" };
+    cur = o; renderOut(cur, "ai"); $("#resetBtn").hidden = false;
+    st.className = "status ai"; st.textContent = "できました。右の下書きを確認してください。";
+  } catch (e) {
+    st.className = "status err"; st.textContent = errCopy(e);
+    if (hideCodes.includes(e.code)) samplePromise = Promise.resolve(null);
+  } finally { btn.disabled = false; stop.hidden = true; }
+};
+
+const SAMPLE_CAL = [
+  ["11/4","水","定休日の舞台裏","スタッフが掃除しているラン、見たことありますか？","カルーセル"],
+  ["11/6","金","ハスキーあるある","ハスキーの「アオーン」、何回聞こえるでしょう","リール"],
+  ["11/8","日","お客さま紹介","10歳のモカちゃん、今日も特等席です","投稿"],
+  ["11/10","火","ワクチンのお知らせ","来店前に確認してほしい、たった1つのこと","カルーセル"],
+  ["11/12","木","デビュー特集","はじめてのドッグラン、固まる子ほど化けます","リール"],
+  ["11/14","土","週末の空き状況","土曜の午前、まだ走れます","ストーリーズ"],
+  ["11/16","月","メニュー紹介","人も犬も同じ顔になる、ささみプレート","投稿"],
+  ["11/18","水","定休日の質問箱","いただいた質問に、店長が全部答えます","ストーリーズ"],
+  ["11/20","金","大型犬の悩み","大型犬OKのお店、意外と少ない理由","カルーセル"],
+  ["11/22","日","いい夫婦の日","夫婦で来るお客さまの、いつもの席","投稿"],
+  ["11/25","水","冬の準備","寒くなるとハスキーが元気になる、本当の話","リール"],
+  ["11/28","土","月のまとめ","今月デビューした12頭、ぜんぶ見せます","リール"]
+].map(([d, w, theme, hook, fmt]) => ({ d, w, theme, hook, fmt }));
+function renderCal(list, src) {
+  $("#cal").innerHTML = list.map(x => `<div class="day"><span class="d">${esc(x.d)}（${esc(x.w)}）</span><span class="t">${esc(x.theme)}</span><span class="h">${esc(x.hook)}</span><span><span class="pill p-line">${esc(x.fmt)}</span></span></div>`).join("");
+  $("#calStatus").className = "status" + (src === "ai" ? " ai" : "");
+  $("#calStatus").textContent = src === "ai" ? "AIが作った計画です" : "見本の計画を表示中";
+}
+renderCal(SAMPLE_CAL, "sample");
+$("#calBtn").onclick = async () => {
+  const st = $("#calStatus"), btn = $("#calBtn");
+  const sample = await samplePromise;
+  if (!sample) { st.className = "status err"; st.textContent = "この表示環境ではAIが使えないため、見本のままです。"; return; }
+  btn.disabled = true; st.className = "status ai"; st.innerHTML = 'AIが1か月分を計画しています <span class="thinking"><i></i><i></i><i></i></span>';
+  const prompt = `ドッグカフェ兼ドッグラン「${STORE.name}」（大型犬・ハスキーのお客さまが多い。水曜定休）の、2026年11月4日〜11月30日のSNS投稿計画を12本作ってください。
+目的：${goal}
+型：
+${RULES.map((r, i) => `${i + 1}. ${r}`).join("\n")}
+媒体はInstagram。同じテーマを続けない。リール・カルーセル・投稿・ストーリーズを混ぜる。日付と曜日は正しく（2026年11月4日は水曜日）。
+次の形のJSON配列だけを返す：
+[{"d":"11/4","w":"水","theme":"テーマ（12字以内）","hook":"1行目の案（25字以内）","fmt":"リール"}]`;
+  try {
+    const arr = await sample.json(prompt, { cache: false });
+    const WD = "日月火水木金土", seen = new Set();
+    const ok = (Array.isArray(arr) ? arr : []).map(x => {
+      const m = /^11\/(\d{1,2})$/.exec(String(x?.d || "").trim()), day = m ? +m[1] : 0;
+      if (day < 4 || day > 30 || seen.has(day) || ![x.theme, x.hook, x.fmt].every(isStr)) return null;
+      seen.add(day); return { day, d: "11/" + day, w: WD[new Date(2026, 10, day).getDay()], theme: x.theme, hook: x.hook, fmt: x.fmt };
+    }).filter(Boolean).sort((a, b) => a.day - b.day);
+    if (ok.length < 12) throw { code: "invalid_json" };
+    renderCal(ok.slice(0, 12), "ai");
+  } catch (e) {
+    st.className = "status err"; st.textContent = errCopy(e);
+    if (hideCodes.includes(e.code)) samplePromise = Promise.resolve(null);
+  } finally { btn.disabled = false; }
+};
+
+/* ---------- 時間の試算 ---------- */
+const S1 = [
+  { k: "resv", label: "予約の受付・変更", unit: "件/日", v: 20, min: 0, max: 60, per: 4, cut: .8, hint: "1件あたり4分 → 仕組み化で8割減（フォームと自動台帳）" },
+  { k: "msg", label: "問い合わせの返信", unit: "件/日", v: 12, min: 0, max: 50, per: 5, cut: .6, hint: "1件あたり5分 → 6割減（AIの下書きを確認して送るだけ）" },
+  { k: "vac", label: "ワクチン証明の確認", unit: "頭/日", v: 20, min: 0, max: 60, per: 2, cut: .85, hint: "1頭あたり2分 → 8割5分減（登録時に1回だけ）" },
+  { k: "rep", label: "日報・売上の集計", unit: "分/日", v: 40, min: 0, max: 120, per: 1, cut: .9, hint: "→ 9割減（毎朝LINEに自動で届く）" },
+  { k: "days", label: "月の営業日", unit: "日", v: 26, min: 10, max: 31, hint: "水曜定休なら26日前後" },
+  { k: "eff", label: "削減の効き目（目安に対して）", unit: "%", v: 100, min: 30, max: 100, step: 10, hint: "各項目の目安どおりなら100%。控えめに見るなら下げる" }
+];
+const S2 = [
+  { k: "share", label: "SNSに回せる割合", unit: "%", v: 40, min: 0, max: 100, step: 10, hint: "減った時間のうち、キタオカさん本人がSNSに使える割合（スタッフ分は除く）" },
+  { k: "hNo", label: "SNS1案件の作業（AIなし）", unit: "時間/月", v: 20, min: 4, max: 60, hint: "企画・撮影指示・文章・分析" },
+  { k: "hAi", label: "SNS1案件の作業（AIあり）", unit: "時間/月", v: 8, min: 1, max: 40, hint: "下書きはAI、キタオカさんは監修と仕上げ" },
+  { k: "yen", label: "1案件の月額（仮の値）", unit: "円", v: 50000, min: 10000, max: 300000, step: 5000, hint: "ヒアリングで実際の相場に置き換えます" }
+];
+const val = {};
+function sliders(el, list) {
+  el.innerHTML = list.map(s => `<div class="slider"><label for="s-${s.k}">${s.label}</label><span class="v" id="v-${s.k}"></span>
+    <input type="range" id="s-${s.k}" min="${s.min}" max="${s.max}" step="${s.step || 1}" value="${s.v}"><span class="hint">${s.hint}</span></div>`).join("");
+  list.forEach(s => { val[s.k] = s.v; $("#s-" + s.k).addEventListener("input", e => { val[s.k] = +e.target.value; calc(); }); });
+}
+sliders($("#sliders"), S1); sliders($("#sliders2"), S2);
+function calc() {
+  [...S1, ...S2].forEach(s => $("#v-" + s.k).textContent = s.k === "yen" ? "¥" + val[s.k].toLocaleString() : val[s.k] + " " + s.unit.replace("/日", "").replace("/月", ""));
+  const items = S1.filter(s => s.cut).map(s => ({ label: s.label, h: val[s.k] * s.per * s.cut * (val.eff / 100) * val.days / 60 }));
+  const total = items.reduce((a, b) => a + b.h, 0);
+  $("#rHours").innerHTML = Math.round(total) + "<small>時間</small>";
+  const mx = Math.max(...items.map(i => i.h), 1);
+  $("#rBars").innerHTML = items.map(i => `<div class="b"><span>${i.label}</span><span class="track"><span class="fill" style="width:${(i.h / mx * 100).toFixed(1)}%"></span></span><span>${i.h.toFixed(1)}h</span></div>`).join("");
+  const snsH = total * val.share / 100;
+  const hAi = Math.max(1, val.hAi), cases = Math.floor(snsH / hAi);
+  $("#rCases").innerHTML = cases + "<small>件／月</small>";
+  const without = Math.floor(snsH / Math.max(1, val.hNo));
+  $("#rCasesNote").textContent = `SNSに回せるのは約${Math.round(snsH)}時間。AIなしなら ${without}件、AIの下書きがあれば ${cases}件です。`;
+  $("#rYen").textContent = "¥" + (cases * val.yen).toLocaleString();
+}
+calc();
+})();
+</script>
+
+</body>
+</html>

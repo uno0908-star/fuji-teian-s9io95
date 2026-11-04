@@ -1,0 +1,1776 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="店舗運営・本部業務の管理コンソール試作（ポートフォリオ）">
+<style>*{margin:0;padding:0}img,svg{max-width:100%}</style>
+</head>
+<body><div style="position:fixed;right:12px;bottom:12px;z-index:999"><a href="works.html" style="display:inline-block;background:#1c4f8f;color:#fff;font:700 13px/1 sans-serif;padding:10px 14px;border-radius:999px;text-decoration:none">← 制作実績に戻る</a></div>
+<title>バックヤード</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@400;500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap">
+
+<style>
+/* ============================================================
+   トークン  ── 明色を基準に定義し、暗色は同じ役割名で差し替える
+   ============================================================ */
+:root{
+  color-scheme: light;
+
+  --paper:#ffffff;
+  --ground:#f2f4f7;
+  --panel:#ffffff;
+  --sunken:#f6f7fa;
+  --rail:#ffffff;
+
+  --line:#e3e5ea;
+  --line-strong:#cbd0d9;
+
+  --ink:#151820;
+  --ink-2:#4d5563;
+  --ink-3:#7c8595;
+
+  --accent:#1c4f8f;
+  --accent-ink:#1c4f8f;
+  --accent-soft:#eaf1fa;
+  --accent-line:#b9d2ee;
+
+  --series-1:#2a78d6;
+  --series-1-wash:rgba(42,120,214,.10);
+
+  --good:#0ca30c;
+  --warn:#fab219;
+  --serious:#ec835a;
+  --crit:#d03b3b;
+  --late-ink:#8a6100;   /* 明色地では黄は読めないので、文字は濃い黄土色にする */
+  --good-soft:#eaf6ea;
+  --warn-soft:#fdf4e0;
+  --crit-soft:#fbecec;
+
+  --shadow:0 1px 2px rgba(21,24,32,.05), 0 8px 24px rgba(21,24,32,.05);
+  --shadow-sm:0 1px 2px rgba(21,24,32,.06);
+
+  --font-doc:"Zen Old Mincho","Yu Mincho","YuMincho","Hiragino Mincho ProN",serif;
+  --font-ui:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --paper:#12151b;
+    --ground:#0d1015;
+    --panel:#171b22;
+    --sunken:#1b202a;
+    --rail:#141821;
+    --line:#272d38;
+    --line-strong:#3a4250;
+    --ink:#eef1f6;
+    --ink-2:#a6afbe;
+    --ink-3:#77808f;
+    --accent:#82b4f0;
+    --accent-ink:#9cc5f7;
+    --accent-soft:#172740;
+    --accent-line:#2b4463;
+    --late-ink:#fab219;
+    --series-1:#3987e5;
+    --series-1-wash:rgba(57,135,229,.16);
+    --good-soft:#132a13;
+    --warn-soft:#2e2410;
+    --crit-soft:#2d1616;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.32);
+    --shadow-sm:0 1px 2px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --paper:#12151b;
+  --ground:#0d1015;
+  --panel:#171b22;
+  --sunken:#1b202a;
+  --rail:#141821;
+  --line:#272d38;
+  --line-strong:#3a4250;
+  --ink:#eef1f6;
+  --ink-2:#a6afbe;
+  --ink-3:#77808f;
+  --accent:#82b4f0;
+  --accent-ink:#9cc5f7;
+  --accent-soft:#172740;
+  --accent-line:#2b4463;
+  --late-ink:#fab219;
+  --series-1:#3987e5;
+  --series-1-wash:rgba(57,135,229,.16);
+  --good-soft:#132a13;
+  --warn-soft:#2e2410;
+  --crit-soft:#2d1616;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.32);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:var(--font-ui);
+  font-size:15px;
+  line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{margin:0;text-wrap:balance;line-height:1.4}
+p{margin:0}
+a{color:var(--accent-ink)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--series-1);outline-offset:2px;border-radius:3px}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important}}
+
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+
+/* ============================================================
+   1層目 ── 提案（明朝の register）
+   ============================================================ */
+.pitch{background:var(--paper);border-bottom:1px solid var(--line)}
+.pitch-in{padding:64px 0 44px}
+.eyebrow{
+  font-family:var(--font-mono);font-size:11.5px;letter-spacing:.14em;
+  color:var(--ink-3);text-transform:uppercase;display:flex;gap:10px;align-items:center;
+}
+.eyebrow::after{content:"";flex:1;height:1px;background:var(--line)}
+.pitch h1{
+  font-family:var(--font-doc);font-weight:600;
+  font-size:clamp(30px,4.4vw,48px);line-height:1.34;letter-spacing:.01em;
+  margin:22px 0 0;max-width:20em;
+}
+.pitch .lede{
+  font-family:var(--font-doc);font-size:17px;line-height:2;color:var(--ink-2);
+  max-width:40em;margin-top:20px;
+}
+.pitch .lede + .lede{margin-top:14px}
+
+.spec{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:0;margin-top:38px;border:1px solid var(--line);border-radius:6px;overflow:hidden;
+}
+.spec div{padding:16px 18px;border-right:1px solid var(--line);background:var(--sunken)}
+.spec div:last-child{border-right:0}
+.spec dt{font-size:11px;letter-spacing:.09em;color:var(--ink-3);font-weight:500}
+.spec dd{margin:5px 0 0;font-size:14.5px;font-weight:500;line-height:1.6}
+.spec dd .mono{font-family:var(--font-mono);font-size:13.5px}
+
+.disclosure{
+  margin-top:22px;padding:14px 18px;border-left:2px solid var(--line-strong);
+  background:var(--sunken);border-radius:0 4px 4px 0;
+  font-size:13.5px;line-height:1.85;color:var(--ink-2);max-width:56em;
+}
+.disclosure b{color:var(--ink);font-weight:700}
+
+/* ============================================================
+   2層目 ── アプリ本体
+   ============================================================ */
+.stage{padding:40px 0 56px}
+.stage-head{
+  display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:14px;
+}
+.stage-head h2{font-family:var(--font-doc);font-size:19px;font-weight:600}
+.stage-head span{font-size:12.5px;color:var(--ink-3);font-family:var(--font-mono)}
+
+.app{
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  box-shadow:var(--shadow);overflow:hidden;
+}
+.topbar{
+  display:flex;align-items:center;gap:16px;padding:0 18px;height:56px;
+  border-bottom:1px solid var(--line);background:var(--panel);
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.02em}
+.brand .mark{
+  width:26px;height:26px;border:1.5px solid var(--accent);border-radius:5px;
+  display:grid;place-items:center;color:var(--accent);
+}
+.brand .mark svg{display:block}
+.topbar .date{
+  font-family:var(--font-mono);font-size:12.5px;color:var(--ink-2);
+  padding-left:16px;border-left:1px solid var(--line);
+}
+.topbar .spacer{flex:1}
+.toggle{
+  display:inline-flex;align-items:center;gap:9px;cursor:pointer;
+  font-size:12.5px;color:var(--ink-2);user-select:none;
+  padding:6px 11px;border:1px solid var(--line);border-radius:999px;background:var(--panel);
+  transition:border-color .15s, background .15s, color .15s;
+}
+.toggle:hover{border-color:var(--line-strong)}
+.toggle .sw{
+  width:30px;height:17px;border-radius:999px;background:var(--line-strong);
+  position:relative;transition:background .18s;flex:none;
+}
+.toggle .sw::after{
+  content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;
+  background:var(--paper);transition:transform .18s;
+}
+body.notes-on .toggle{border-color:var(--accent-line);background:var(--accent-soft);color:var(--accent-ink);font-weight:500}
+body.notes-on .toggle .sw{background:var(--series-1)}
+body.notes-on .toggle .sw::after{transform:translateX(13px)}
+.who{
+  display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-2);
+}
+.who .av{
+  width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink);
+  display:grid;place-items:center;font-size:11px;font-weight:700;border:1px solid var(--accent-line);
+}
+
+.shell{display:grid;grid-template-columns:212px 1fr;min-height:760px}
+.rail{border-right:1px solid var(--line);background:var(--rail);padding:14px 10px;display:flex;flex-direction:column;gap:2px}
+.rail .grp{
+  font-size:10.5px;letter-spacing:.1em;color:var(--ink-3);padding:12px 10px 6px;font-weight:500;
+}
+.nav{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  padding:9px 10px;border:0;background:none;border-radius:6px;cursor:pointer;
+  font-size:13.5px;color:var(--ink-2);transition:background .12s,color .12s;
+}
+.nav:hover{background:var(--sunken);color:var(--ink)}
+.nav[aria-current="true"]{background:var(--accent-soft);color:var(--accent-ink);font-weight:700}
+.nav .ic{width:16px;height:16px;flex:none;opacity:.9}
+.nav .cnt{
+  margin-left:auto;font-family:var(--font-mono);font-size:11px;
+  background:var(--crit);color:#fff;border-radius:999px;padding:0 6px;min-width:19px;text-align:center;
+  line-height:17px;font-weight:500;
+}
+.nav .cnt[data-zero="1"]{background:var(--line-strong);color:var(--ink-2)}
+
+.main{padding:24px 26px 34px;background:var(--panel);min-width:0}
+.view{display:none}
+.view[data-active="1"]{display:block;animation:fade .22s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+.vhead{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+.vhead h3{font-size:18px;font-weight:700;letter-spacing:.01em}
+.vhead p{font-size:12.5px;color:var(--ink-3);margin-left:auto}
+
+/* ---- 解説モードの注記 ---- */
+.note{display:none}
+body.notes-on .note{
+  display:block;margin:10px 0 0;padding:10px 13px 10px 14px;
+  background:var(--accent-soft);border-left:2px solid var(--series-1);border-radius:0 5px 5px 0;
+  font-size:12.5px;line-height:1.8;color:var(--ink-2);
+}
+body.notes-on .note::before{
+  content:"設計意図 " attr(data-n);display:block;
+  font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;
+  color:var(--accent-ink);font-weight:700;margin-bottom:2px;
+}
+body.notes-on .note b{color:var(--ink);font-weight:700}
+
+/* ---- 汎用カード ---- */
+.card{
+  border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:16px 18px;min-width:0;
+}
+.card > h4{
+  font-size:12.5px;font-weight:700;letter-spacing:.03em;color:var(--ink-2);
+  display:flex;align-items:center;gap:9px;margin-bottom:2px;
+}
+.card > h4 .sub{margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--ink-3);font-weight:400;letter-spacing:0}
+
+/* ---- ヒーロー数値 + タイル ---- */
+/* カードは中身の高さで止める（stretch のままだと短いカードの下に空白が残る） */
+.dashcols{align-items:start}
+.topgrid{display:grid;grid-template-columns:1.15fr 2fr;gap:14px;align-items:stretch}
+.hero{border:1px solid var(--line);border-radius:8px;padding:18px;background:var(--panel);position:relative}
+.hero .lbl{font-size:12px;color:var(--ink-2);font-weight:500}
+.hero .val{font-size:46px;font-weight:900;letter-spacing:-.02em;line-height:1.15;margin-top:4px}
+.hero .val small{font-size:22px;font-weight:700;margin-right:2px}
+.hero .dl{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12.5px;color:var(--ink-2)}
+.delta{
+  font-family:var(--font-mono);font-size:12px;font-weight:700;padding:1px 7px;border-radius:4px;
+  display:inline-flex;align-items:center;gap:3px;
+}
+.delta.up{color:var(--good);background:var(--good-soft)}
+.delta.dn{color:var(--crit);background:var(--crit-soft)}
+
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.tile{border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.tile .lbl{font-size:11.5px;color:var(--ink-2);display:flex;align-items:center;gap:6px}
+.tile .val{font-size:27px;font-weight:800;letter-spacing:-.01em;line-height:1.3}
+.tile .val em{font-style:normal;font-size:14px;font-weight:600;color:var(--ink-3);margin-left:1px}
+.tile .foot{font-size:11.5px;color:var(--ink-3);margin-top:auto;padding-top:6px}
+.tile.attn{border-color:var(--crit);background:var(--crit-soft)}
+.tile.attn .lbl{color:var(--crit);font-weight:700}
+
+/* ---- 状態チップ ---- */
+.chip{
+  display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;
+  padding:1px 8px 1px 6px;border-radius:4px;line-height:1.7;white-space:nowrap;
+}
+.dotm{width:9px;height:9px;flex:none}   /* チップの外で使っても潰れないよう、単独クラスで指定する */
+.chip.ok{color:var(--good);background:var(--good-soft)}
+.chip.late{color:var(--late-ink);background:var(--warn-soft)}
+.chip.ng{color:var(--crit);background:var(--crit-soft)}
+.chip.wait{color:var(--ink-2);background:var(--sunken)}
+
+/* ---- 折れ線グラフ ---- */
+.chartbox{position:relative}
+.chartbox svg{display:block;width:100%;height:auto;touch-action:none}
+/* SVGは presentation attribute に var() を渡さず、CSS側で色を当てる */
+.chartbox text{font-family:var(--font-mono);font-size:10px;fill:var(--ink-3)}
+.chartbox text.end{font-size:11.5px;font-weight:700;fill:var(--ink)}
+.chartbox .gl{stroke:var(--line);stroke-width:1}
+.chartbox .tl{stroke:var(--ink-3);stroke-width:1}
+.chartbox .ar{fill:var(--series-1-wash)}
+.chartbox .ln2{fill:none;stroke:var(--series-1);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.chartbox .cr{stroke:var(--line-strong);stroke-width:1}
+.chartbox .dot{fill:var(--series-1);stroke:var(--panel);stroke-width:2}
+.tip{
+  position:absolute;pointer-events:none;opacity:0;transition:opacity .1s;
+  background:var(--panel);border:1px solid var(--line-strong);border-radius:6px;
+  box-shadow:var(--shadow);padding:8px 11px;font-size:12px;white-space:nowrap;z-index:5;
+}
+.tip .d{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3);letter-spacing:.02em}
+.tip .v{font-family:var(--font-mono);font-weight:700;font-size:14px;margin-top:1px}
+.tip .r{font-size:11px;color:var(--ink-2);margin-top:1px}
+
+/* ---- 横棒（店舗別） ---- */
+.bars{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+.brow{display:grid;grid-template-columns:118px 1fr 84px;align-items:center;gap:12px}
+.brow .nm{font-size:12.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btrack{position:relative;height:16px}
+.bfill{height:16px;background:var(--series-1);border-radius:0 4px 4px 0;transition:width .5s cubic-bezier(.2,.7,.3,1)}
+.bmark{position:absolute;top:-3px;height:22px;width:1px;background:var(--ink-3)}
+.bmark::after{
+  content:"";position:absolute;top:-3px;left:-2px;width:5px;height:3px;background:var(--ink-3);
+}
+.brow .vl{font-family:var(--font-mono);font-size:12.5px;font-variant-numeric:tabular-nums;text-align:right}
+.brow .vl i{font-style:normal;font-size:10.5px;color:var(--ink-3);display:block;line-height:1.3}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-2);margin-top:14px;align-items:center}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend .sw{width:12px;height:4px;border-radius:2px;background:var(--series-1)}
+.legend .tk{width:1px;height:12px;background:var(--ink-3)}
+
+/* ---- 提出状況グリッド ---- */
+.grid7{display:grid;grid-template-columns:112px repeat(7,1fr);gap:3px;align-items:center;margin-top:10px}
+.grid7 .hd{font-family:var(--font-mono);font-size:10px;color:var(--ink-3);text-align:center;letter-spacing:0}
+.grid7 .nm{font-size:11.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:4px}
+.cell{
+  height:24px;border-radius:4px;display:grid;place-items:center;
+  font-size:10px;font-weight:700;border:1px solid transparent;cursor:default;
+}
+.cell.ok{background:var(--good-soft);color:var(--good)}
+.cell.late{background:var(--warn-soft);color:var(--late-ink)}
+.cell.ng{background:var(--crit-soft);color:var(--crit)}
+.cell.off{background:var(--sunken);color:var(--ink-3)}
+
+/* ---- 要対応リスト ---- */
+.todo{display:flex;flex-direction:column;gap:0;margin-top:6px}
+.todo button{
+  display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;
+  padding:11px 4px;background:none;border:0;border-bottom:1px solid var(--line);cursor:pointer;
+}
+.todo button:hover{background:var(--sunken)}
+.todo button:last-child{border-bottom:0}
+.todo .sev{width:3px;align-self:stretch;border-radius:2px;flex:none;margin-top:2px}
+.todo .tx{flex:1;min-width:0}
+.todo .t1{font-size:13px;font-weight:500;line-height:1.6}
+.todo .t2{font-size:11.5px;color:var(--ink-3);font-family:var(--font-mono);margin-top:1px}
+.todo .go{font-size:11.5px;color:var(--accent-ink);white-space:nowrap;align-self:center;font-weight:500}
+
+/* ---- 日報：二分割 ---- */
+.split{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start}
+.rlist{border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.rlist .rh{
+  padding:9px 13px;background:var(--sunken);border-bottom:1px solid var(--line);
+  font-size:11.5px;color:var(--ink-2);display:flex;justify-content:space-between;font-weight:500;
+}
+.ritem{
+  display:block;width:100%;text-align:left;padding:11px 13px;border:0;border-bottom:1px solid var(--line);
+  background:none;cursor:pointer;transition:background .12s;
+}
+.ritem:last-child{border-bottom:0}
+.ritem:hover{background:var(--sunken)}
+.ritem[aria-current="true"]{background:var(--accent-soft);box-shadow:inset 2px 0 0 var(--series-1)}
+.ritem .l1{display:flex;align-items:center;gap:8px}
+.ritem .nm{font-size:13.5px;font-weight:500}
+.ritem .tp{font-size:10px;color:var(--ink-3);border:1px solid var(--line-strong);border-radius:3px;padding:0 4px;line-height:1.6}
+.ritem .l2{display:flex;align-items:center;gap:8px;margin-top:4px}
+.ritem .tm{font-family:var(--font-mono);font-size:11px;color:var(--ink-3);margin-left:auto}
+
+.detail{border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.dh{padding:14px 18px;border-bottom:1px solid var(--line);background:var(--sunken)}
+.dh .t{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.dh h4{font-size:16px;font-weight:700}
+.dh .meta{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-3);margin-top:3px}
+.dsec{padding:16px 18px;border-bottom:1px solid var(--line)}
+.dsec:last-child{border-bottom:0}
+.dsec > .st{
+  font-size:11px;letter-spacing:.08em;color:var(--ink-3);font-weight:500;margin-bottom:10px;
+  display:flex;align-items:center;gap:8px;
+}
+.dsec > .st .r{margin-left:auto;font-family:var(--font-mono);letter-spacing:0}
+
+.ck{display:grid;grid-template-columns:1fr 1fr;gap:0 22px}
+.ck div{
+  display:flex;align-items:center;gap:9px;padding:6px 0;border-bottom:1px dotted var(--line);font-size:13px;
+}
+.ck div .m{font-family:var(--font-mono);font-size:11px;color:var(--ink-3);margin-left:auto}
+.ck div.bad{color:var(--crit);font-weight:500}
+.mk{width:15px;height:15px;flex:none}
+
+.photos{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.ph{
+  border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--sunken);
+  cursor:pointer;padding:0;text-align:left;transition:border-color .12s;
+}
+.ph:hover{border-color:var(--line-strong)}
+.ph[aria-current="true"]{border-color:var(--series-1);box-shadow:0 0 0 1px var(--series-1)}
+.ph svg{display:block;width:100%;height:auto}
+.ph .cap{padding:6px 8px;font-size:11px;color:var(--ink-2);display:flex;justify-content:space-between;gap:6px;align-items:center}
+.ph .cap b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ph .cap i{font-style:normal;font-family:var(--font-mono);font-size:10px;color:var(--ink-3);flex:none}
+.bigph{border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:10px;background:var(--sunken)}
+.bigph svg{display:block;width:100%;height:auto}
+
+.memo-box{
+  background:var(--sunken);border:1px solid var(--line);border-radius:6px;padding:12px 14px;
+  font-size:13.5px;line-height:1.85;
+}
+.acts{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{
+  border:1px solid var(--line-strong);background:var(--panel);border-radius:6px;
+  padding:8px 16px;font-size:13.5px;font-weight:500;cursor:pointer;transition:.13s;
+}
+.btn:hover{border-color:var(--ink-3)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.pri:hover{filter:brightness(1.1)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:5px 11px;font-size:12.5px}
+select,input[type=text],textarea{
+  font:inherit;font-size:13px;color:var(--ink);background:var(--panel);
+  border:1px solid var(--line-strong);border-radius:5px;padding:6px 9px;
+}
+textarea{width:100%;resize:vertical;line-height:1.7}
+.done-banner{
+  display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:6px;
+  background:var(--good-soft);color:var(--good);font-size:13px;font-weight:500;
+}
+
+/* ---- OCR ---- */
+/* grid の子は min-width:auto のままだと中身の最小幅で押し広げられて横あふれする */
+.ocr{display:grid;grid-template-columns:330px minmax(0,1fr);gap:18px;align-items:start}
+.ocr > *{min-width:0}
+.picker{display:flex;flex-direction:column;gap:8px}
+.pick{
+  border:1px solid var(--line);border-radius:7px;padding:10px 13px;background:var(--panel);
+  cursor:pointer;text-align:left;display:flex;gap:11px;align-items:center;transition:.13s;
+}
+.pick:hover{border-color:var(--line-strong);background:var(--sunken)}
+.pick[aria-current="true"]{border-color:var(--series-1);background:var(--accent-soft)}
+.pick .ic{width:22px;height:26px;flex:none;color:var(--ink-3)}
+.pick[aria-current="true"] .ic{color:var(--series-1)}
+.pick .t1{font-size:13px;font-weight:500}
+.pick .t2{font-size:11px;color:var(--ink-3);font-family:var(--font-mono)}
+
+.paper{
+  background:#fff;color:#1a1a1a;border-radius:2px;padding:16px 18px 20px;
+  font-family:var(--font-mono);font-size:11.5px;line-height:1.85;
+  box-shadow:0 2px 10px rgba(0,0,0,.18);transform:rotate(-.5deg);
+  position:relative;max-width:290px;margin:14px auto 4px;
+}
+.paper::before,.paper::after{
+  content:"";position:absolute;left:0;right:0;height:6px;
+  background:repeating-linear-gradient(135deg,#fff 0 5px,transparent 5px 10px);
+}
+.paper::before{top:-5px}
+.paper::after{bottom:-5px;transform:scaleY(-1)}
+.paper hr{border:0;border-top:1px dashed #b9b9b9;margin:7px 0}
+.paper .ttl{text-align:center;font-weight:700;font-size:12.5px;letter-spacing:.08em}
+.paper .sm{text-align:center;font-size:10px;color:#666}
+.paper .ln{display:flex;justify-content:space-between;gap:10px}
+.paper .ln.big{font-weight:700;font-size:13px}
+.paper .bc{
+  margin-top:10px;height:26px;
+  background:repeating-linear-gradient(90deg,#1a1a1a 0 2px,#fff 2px 3px,#1a1a1a 3px 4px,#fff 4px 7px,#1a1a1a 7px 8px,#fff 8px 11px);
+}
+.papwrap{position:relative;padding:8px 0 14px}
+.papwrap .stamp{
+  position:absolute;right:4px;top:0;font-family:var(--font-mono);font-size:10px;color:var(--ink-3);
+}
+
+.steps{display:flex;flex-direction:column;gap:0;margin:2px 0 0}
+.step{display:flex;align-items:center;gap:11px;padding:8px 0;font-size:13px;color:var(--ink-3);border-bottom:1px dotted var(--line)}
+.step:last-child{border-bottom:0}
+.step .n{
+  width:19px;height:19px;border-radius:50%;border:1.5px solid var(--line-strong);flex:none;
+  display:grid;place-items:center;font-family:var(--font-mono);font-size:10px;
+}
+.step[data-s="run"]{color:var(--ink)}
+.step[data-s="run"] .n{border-color:var(--series-1);color:var(--series-1);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.step[data-s="done"]{color:var(--ink)}
+.step[data-s="done"] .n{border-color:var(--good);background:var(--good);color:#fff}
+.step .ms{margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--ink-3)}
+
+table.x{width:100%;border-collapse:collapse;font-size:13px}
+table.x th{
+  text-align:left;font-size:11px;letter-spacing:.05em;color:var(--ink-3);font-weight:500;
+  padding:0 8px 7px;border-bottom:1px solid var(--line);
+}
+table.x td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.x tr:last-child td{border-bottom:0}
+table.x td.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums;text-align:right;font-weight:500}
+table.x tr.low{background:var(--warn-soft)}
+.conf{display:flex;align-items:center;gap:7px;justify-content:flex-end}
+.conf .bar{width:44px;height:5px;border-radius:3px;background:var(--line);overflow:hidden;flex:none}
+.conf .bar i{display:block;height:5px;background:var(--series-1);border-radius:3px}
+.conf .bar.w i{background:var(--warn)}
+.conf .pc{font-family:var(--font-mono);font-size:11px;color:var(--ink-2);width:30px;text-align:right}
+.verify{
+  margin-top:14px;border:1px solid var(--line);border-radius:7px;padding:12px 14px;font-size:13px;
+  display:flex;gap:12px;align-items:flex-start;
+}
+.verify.ok{border-color:var(--good);background:var(--good-soft)}
+.verify.ng{border-color:var(--warn);background:var(--warn-soft)}
+.verify .fm{display:block;font-family:var(--font-mono);font-size:12px;margin-top:3px;color:var(--ink-2);word-break:break-word}
+.emptybox{
+  border:1px dashed var(--line-strong);border-radius:8px;padding:44px 20px;text-align:center;
+  color:var(--ink-3);font-size:13.5px;line-height:2;
+}
+
+/* ---- 問い合わせ ---- */
+.inq{display:flex;flex-direction:column;gap:12px}
+.icard{border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.icard .ih{display:flex;gap:12px;align-items:flex-start;padding:13px 16px}
+.icard .sev{width:3px;border-radius:2px;align-self:stretch;flex:none}
+.icard .raw{font-size:13.5px;line-height:1.85;flex:1;min-width:0}
+.icard .raw .from{font-family:var(--font-mono);font-size:11px;color:var(--ink-3);display:block;margin-bottom:3px}
+.icard .raw mark{background:var(--warn-soft);color:inherit;padding:0 2px;border-radius:2px;box-shadow:inset 0 -1px 0 var(--warn)}
+.judge{
+  border-top:1px solid var(--line);background:var(--sunken);padding:12px 16px;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 20px;
+}
+.jf .k{font-size:10.5px;letter-spacing:.07em;color:var(--ink-3);font-weight:500}
+.jf .v{font-size:13.5px;font-weight:500;margin-top:1px}
+.draft{border-top:1px solid var(--line);padding:12px 16px}
+.draft .k{font-size:10.5px;letter-spacing:.07em;color:var(--ink-3);font-weight:500;margin-bottom:5px}
+.draft .body{
+  font-size:13px;line-height:1.9;background:var(--panel);border:1px solid var(--line);
+  border-radius:6px;padding:10px 13px;white-space:pre-wrap;
+}
+.draft .row{display:flex;gap:10px;align-items:center;margin-top:11px;flex-wrap:wrap}
+.icard.settled{opacity:.62}
+.icard.settled .ih{padding-bottom:13px}
+
+/* ---- トースト ---- */
+/* 画面内スイッチ（トップバーの解説モードとは別物） */
+.sws{display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:12.5px;color:var(--ink-2);user-select:none}
+.sws input{position:absolute;opacity:0;width:0;height:0}
+.sws .sw{width:30px;height:17px;border-radius:999px;background:var(--line-strong);position:relative;transition:background .18s;flex:none}
+.sws .sw::after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:var(--paper);transition:transform .18s}
+.sws[data-on="true"] .sw{background:var(--series-1)}
+.sws[data-on="true"] .sw::after{transform:translateX(13px)}
+.sws input:focus-visible + .sw{outline:2px solid var(--series-1);outline-offset:2px}
+
+.toasts{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:50}
+.toast{
+  background:var(--ink);color:var(--paper);padding:11px 16px;border-radius:7px;font-size:13px;
+  box-shadow:var(--shadow);animation:tin .25s ease;max-width:340px;
+}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ============================================================
+   3層目 ── 設計メモ（明朝の register）
+   ============================================================ */
+.memo{background:var(--paper);border-top:1px solid var(--line);padding:64px 0 72px}
+.memo h2{
+  font-family:var(--font-doc);font-size:26px;font-weight:600;letter-spacing:.02em;
+}
+.memo .sub{font-family:var(--font-doc);color:var(--ink-2);font-size:15px;margin-top:8px;max-width:44em;line-height:2}
+.msec{margin-top:44px}
+.msec > h3{
+  font-family:var(--font-doc);font-size:17px;font-weight:600;
+  padding-bottom:9px;border-bottom:1px solid var(--line-strong);display:flex;align-items:baseline;gap:11px;
+}
+.msec > h3 .no{font-family:var(--font-mono);font-size:11px;color:var(--ink-3);font-weight:400;letter-spacing:.1em}
+.msec > p{font-family:var(--font-doc);font-size:14.5px;line-height:2.05;color:var(--ink-2);margin-top:14px;max-width:44em}
+
+.flow{display:flex;gap:0;flex-wrap:wrap;margin-top:20px;align-items:stretch}
+.fstep{
+  flex:1 1 150px;border:1px solid var(--line);border-radius:6px;padding:12px 14px;background:var(--sunken);
+  margin-right:22px;position:relative;min-width:150px;
+}
+.fstep:last-child{margin-right:0}
+.fstep:not(:last-child)::after{
+  content:"";position:absolute;right:-16px;top:50%;width:10px;height:10px;
+  border-top:1.5px solid var(--line-strong);border-right:1.5px solid var(--line-strong);
+  transform:translateY(-50%) rotate(45deg);
+}
+.fstep .tm{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3)}
+.fstep .t{font-size:13.5px;font-weight:700;margin-top:2px}
+.fstep .d{font-size:12px;color:var(--ink-2);margin-top:5px;line-height:1.75}
+.fstep .w{font-size:11.5px;color:var(--crit);margin-top:7px;padding-top:7px;border-top:1px dotted var(--line-strong);line-height:1.7}
+
+.tblwrap{overflow-x:auto;margin-top:18px;border:1px solid var(--line);border-radius:7px}
+table.m{width:100%;border-collapse:collapse;font-size:13.5px;min-width:600px}
+table.m th{
+  text-align:left;padding:10px 14px;background:var(--sunken);border-bottom:1px solid var(--line);
+  font-size:11.5px;letter-spacing:.05em;color:var(--ink-2);font-weight:700;white-space:nowrap;
+}
+table.m td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.75}
+table.m tr:last-child td{border-bottom:0}
+table.m td.mono{font-family:var(--font-mono);font-size:12.5px;white-space:nowrap;color:var(--ink-2)}
+table.m td.pick{font-weight:700}
+
+.judgelist{list-style:none;padding:0;margin:20px 0 0;counter-reset:j}
+.judgelist li{
+  counter-increment:j;padding:14px 0 14px 44px;border-bottom:1px solid var(--line);position:relative;
+}
+.judgelist li:last-child{border-bottom:0}
+.judgelist li::before{
+  content:counter(j,decimal-leading-zero);position:absolute;left:0;top:15px;
+  font-family:var(--font-mono);font-size:11px;color:var(--accent-ink);font-weight:700;letter-spacing:.05em;
+}
+.judgelist .t{font-size:14.5px;font-weight:700;line-height:1.7}
+.judgelist .d{font-size:13.5px;color:var(--ink-2);line-height:1.95;margin-top:4px;max-width:46em}
+
+.days{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;margin-top:20px}
+.day{border:1px solid var(--line);border-radius:6px;padding:13px 15px}
+.day .n{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;color:var(--accent-ink);font-weight:700}
+.day .t{font-size:13.5px;font-weight:700;margin-top:4px;line-height:1.6}
+.day .d{font-size:12.5px;color:var(--ink-2);margin-top:5px;line-height:1.8}
+
+.limits{margin-top:18px;border-left:2px solid var(--line-strong);padding:4px 0 4px 18px}
+.limits li{font-size:13.5px;line-height:2;color:var(--ink-2)}
+.limits li b{color:var(--ink)}
+
+.foot{
+  border-top:1px solid var(--line);padding:28px 0 40px;font-size:12.5px;color:var(--ink-3);
+  display:flex;gap:20px;flex-wrap:wrap;align-items:center;
+}
+.foot .mono{font-family:var(--font-mono)}
+
+/* ---- レスポンシブ ---- */
+@media (max-width:1000px){
+  .shell{grid-template-columns:1fr}
+  .rail{
+    flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);
+    padding:8px;gap:6px;
+  }
+  .rail .grp{display:none}
+  .nav{width:auto;white-space:nowrap;padding:8px 12px}
+  .topgrid{grid-template-columns:1fr}
+  .split,.ocr{grid-template-columns:1fr}
+  .dashcols{grid-template-columns:1fr !important}
+}
+@media (max-width:660px){
+  .tiles{grid-template-columns:1fr}
+  .ck{grid-template-columns:1fr}
+  .main{padding:18px 14px 26px}
+  .pitch-in{padding:44px 0 32px}
+  .wrap{padding:0 16px}
+  .grid7{grid-template-columns:84px repeat(7,1fr)}
+}
+</style>
+
+<!-- ============================================================
+     1層目：提案
+     ============================================================ -->
+<header class="pitch">
+  <div class="wrap pitch-in">
+    <div class="eyebrow">制作実績 ／ 店舗運営・本部業務 DX（試作）</div>
+    <h1>店舗の一日を、<br>本部の一画面に。</h1>
+    <p class="lede">日報・写真・チェックリスト・レシート・店舗からの問い合わせ。毎日バラバラの形で本部に届くものを、ひとつの導線にまとめた業務システムの試作です。ボタンは実際に動きます。</p>
+    <p class="lede">仕様書から作ったものではありません。「本部は結局どこを見たいのか」「店舗は何が面倒でサボるのか」から逆算して画面を決めています。私の進め方——まず小さく作って、使いながら直す——の、その最初の一歩にあたるものです。</p>
+
+    <dl class="spec">
+      <div><dt>制作</dt><dd>Claude Code・1セッション</dd></div>
+      <div><dt>構成</dt><dd class="mono">HTML + JS 単一ファイル / 外部依存なし</dd></div>
+      <div><dt>サンプル</dt><dd class="mono">10店舗 × 14日分</dd></div>
+      <div><dt>実運用への移行先</dt><dd>GAS + スプレッドシート</dd></div>
+    </dl>
+
+    <p class="disclosure"><b>正直に書いておきます。</b>このデモのOCRとAI分類は、実際のAPIを叩いていません（サンプルデータに対する疑似処理です）。実装では Claude API / Gemini API / Cloud Vision API を接続します。ただし本題は認識精度そのものではなく、<b>AIの出力をどう見せ、どこで人が直し、何をもって確定とするか</b>——その導線設計です。そこは実案件と同じ考え方で作ってあります。</p>
+  </div>
+</header>
+
+<!-- ============================================================
+     2層目：アプリ
+     ============================================================ -->
+<div class="stage">
+  <div class="wrap">
+    <div class="stage-head">
+      <h2>動くもの</h2>
+      <span>右上の「解説モード」で、各画面をなぜこう作ったかが表示されます</span>
+    </div>
+
+    <div class="app">
+      <div class="topbar">
+        <div class="brand">
+          <span class="mark" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4">
+              <rect x="1" y="3.5" width="12" height="9" rx="1"/><path d="M1 6.5h12M5 3.5V1.5h4v2"/>
+            </svg>
+          </span>
+          バックヤード
+        </div>
+        <span class="date" id="topdate"></span>
+        <div class="spacer"></div>
+        <button class="toggle" id="noteBtn" aria-pressed="false">
+          <span class="sw" aria-hidden="true"></span>解説モード
+        </button>
+        <div class="who"><span class="av">本</span>本部・運営管理部</div>
+      </div>
+
+      <div class="shell">
+        <nav class="rail" aria-label="メインメニュー">
+          <div class="grp">本部</div>
+          <button class="nav" data-go="dash" aria-current="true">
+            <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="1.5" width="5.5" height="6" rx="1"/><rect x="9" y="1.5" width="5.5" height="3.5" rx="1"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1"/><rect x="9" y="6.5" width="5.5" height="8" rx="1"/></svg>
+            ダッシュボード
+          </button>
+          <button class="nav" data-go="reports">
+            <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3.5 1.5h6L12.5 4.5v10h-9z"/><path d="M9.5 1.5v3h3M5.5 8h5M5.5 11h3"/></svg>
+            日報・チェック
+            <span class="cnt" id="cnt-reports">0</span>
+          </button>
+          <button class="nav" data-go="ocr">
+            <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1.5 4.5v-3h3M14.5 4.5v-3h-3M1.5 11.5v3h3M14.5 11.5v3h-3M4 8h8"/></svg>
+            帳票よみとり
+            <span class="cnt" id="cnt-ocr">0</span>
+          </button>
+          <button class="nav" data-go="inquiry">
+            <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1.5 3.5h13v8h-8l-3.5 3v-3h-1.5z"/><path d="M5 7.5h6"/></svg>
+            問い合わせ
+            <span class="cnt" id="cnt-inq">0</span>
+          </button>
+          <div class="grp">マスタ</div>
+          <button class="nav" data-go="master">
+            <svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 13.5V6l6-4 6 4v7.5z"/><path d="M6.5 13.5V9h3v4.5"/></svg>
+            店舗・テンプレート
+          </button>
+        </nav>
+
+        <main class="main" id="main"></main>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     3層目：設計メモ
+     ============================================================ -->
+<section class="memo">
+  <div class="wrap">
+    <h2>設計メモ</h2>
+    <p class="sub">画面より前に決めたことを書いておきます。実際の案件でも、最初にこの粒度の紙を一枚つくってから作りはじめています。</p>
+
+    <div class="msec">
+      <h3><span class="no">01</span>なぜこの4画面なのか</h3>
+      <p>機能を並べたのではなく、店舗の一日と本部の一日をつないだら、この4つが残りました。店舗側は「開店前」「締め」の2回しか本部に接点がなく、本部側は翌朝までに判断できないと打ち手が一日遅れます。ここが詰まる。</p>
+      <div class="flow">
+        <div class="fstep"><div class="tm">07:00 店舗</div><div class="t">開店前点検</div><div class="d">温度・清掃・期限。紙のチェック表と、口頭の申し送り。</div><div class="w">紙は本部に届かない</div></div>
+        <div class="fstep"><div class="tm">日中 店舗</div><div class="t">仕入・レシート</div><div class="d">納品書とレシートが箱にたまる。</div><div class="w">月末にまとめて手入力</div></div>
+        <div class="fstep"><div class="tm">22:00 店舗</div><div class="t">レジ締め・日報</div><div class="d">日計表を撮ってLINEで送る店、Excelの店。</div><div class="w">形式が店ごとにバラバラ</div></div>
+        <div class="fstep"><div class="tm">翌 09:00 本部</div><div class="t">確認・指示</div><div class="d">全店ぶんを目視で確認し、気になった店だけ電話。</div><div class="w">見落としは気づけない</div></div>
+      </div>
+      <p>だから本部側の画面は「全部見る」ではなく<b>「手番が自分に回っているものだけ出す」</b>設計にしています。件数バッジは通知ではなく、担当者の残タスクです。</p>
+    </div>
+
+    <div class="msec">
+      <h3><span class="no">02</span>データの持ち方</h3>
+      <p>店舗ごとに業務が違う、という要件を「店舗ごとに画面を作る」で解くと保守が破綻します。<b>業務テンプレートを店舗マスタから参照する</b>形にして、本部が項目を足すだけで全店に反映されるようにします。</p>
+      <div class="tblwrap">
+        <table class="m">
+          <thead><tr><th>テーブル</th><th>持つもの</th><th>効いてくる場面</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">stores</td><td>店舗コード／業態（直営・FC・駅ナカ）／適用テンプレートID／目標値</td><td>チェック項目の出し分け、目標線の表示</td></tr>
+            <tr><td class="mono">task_templates</td><td>点検項目、入力型（○×／数値／写真必須）、基準値</td><td>本部が項目を1つ足すと翌朝から全店に出る</td></tr>
+            <tr><td class="mono">reports</td><td>提出日時、提出者、状態（承認待ち／承認／差し戻し）</td><td>提出状況グリッド、未提出の検知</td></tr>
+            <tr><td class="mono">report_answers</td><td>項目ID、値、基準逸脱フラグ</td><td>温度8.4℃のような「数値の異常」を自動で拾う</td></tr>
+            <tr><td class="mono">attachments</td><td>画像、撮影時刻、撮影者、Driveファイル</td><td>撮り置き写真の使い回しを撮影時刻で弾く</td></tr>
+            <tr><td class="mono">documents</td><td>帳票種別、読取結果JSON、項目別信頼度、確定者</td><td>あとから「誰が確定した数字か」を追える</td></tr>
+            <tr><td class="mono">inquiries</td><td>本文、AI分類、緊急度、担当部署、対応履歴</td><td>振り分けの精度を後から検証できる</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="msec">
+      <h3><span class="no">03</span>現場で効く判断</h3>
+      <ol class="judgelist">
+        <li><div class="t">AIの出力は、必ず「信頼度」と「人が直す枠」とセットで出す</div><div class="d">100%正しく読める前提の画面を作ると、1回外した時点で誰も使わなくなります。逆に、低信頼の項目だけ黄色くして最初からカーソルを置いておけば、外れること自体は問題になりません。</div></li>
+        <li><div class="t">検算できるものは、AIに聞かずに検算する</div><div class="d">合計＝小計＋税、日計表の現金過不足、点数×単価。ここは計算で確定できます。AIに任せるのは「どの数字がどの項目か」だけにして、正しさは機械的に担保します。</div></li>
+        <li><div class="t">差し戻しは理由を必須にする</div><div class="d">承認ボタンだけの仕組みは、押されるだけで何も改善しません。差し戻し理由がたまると、翌月の点検項目を直す材料になります。仕組みの目的は記録ではなく改善なので。</div></li>
+        <li><div class="t">未対応は「件数」ではなく「誰の手番か」で出す</div><div class="d">3件と出すだけでは動きません。本部待ちなのか店舗待ちなのかを分けると、朝礼でそのまま使えます。</div></li>
+        <li><div class="t">写真は撮影時刻とセットで保存する</div><div class="d">現場の運用は必ず抜け道を見つけます。前日の写真の再送は、EXIFの撮影時刻を見れば止まります。性善説で作らないこと。</div></li>
+      </ol>
+    </div>
+
+    <div class="msec">
+      <h3><span class="no">04</span>実装構成の選択肢</h3>
+      <p>最初から作り込まないほうがいい、という立場です。10〜30店舗・1日数百件までなら、Google Workspace の中だけで完結させたほうが速く、安く、引き継ぎもできます。</p>
+      <div class="tblwrap">
+        <table class="m">
+          <thead><tr><th>　</th><th class="pick">小さく始める（推奨）</th><th>伸ばすとき</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">画面</td><td class="pick">GAS Web アプリ（HTML Service）</td><td>Next.js / React</td></tr>
+            <tr><td class="mono">データ</td><td class="pick">スプレッドシート</td><td>Supabase / Cloud SQL</td></tr>
+            <tr><td class="mono">画像</td><td class="pick">Google Drive</td><td>Cloud Storage</td></tr>
+            <tr><td class="mono">AI</td><td class="pick">Gemini API（無料枠）／ Claude API</td><td>同左 + 結果のキャッシュ</td></tr>
+            <tr><td class="mono">認証</td><td class="pick">Google アカウント（既存）</td><td>SSO / ロール管理</td></tr>
+            <tr><td class="mono">月額</td><td class="pick">実質ゼロ〜数百円</td><td>数千円〜</td></tr>
+            <tr><td class="mono">向き不向き</td><td class="pick">〜30店舗。現場が Google を使っているなら断然こちら</td><td>店舗数が3桁、または外部連携が増えてきたら</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="msec">
+      <h3><span class="no">05</span>お仕事をいただいた場合の最初の5日</h3>
+      <div class="days">
+        <div class="day"><div class="n">DAY 1</div><div class="t">現場の言葉を集める</div><div class="d">今使っている紙・Excel・LINEをそのまま見せてもらう。要件定義より先に、実物。</div></div>
+        <div class="day"><div class="n">DAY 2</div><div class="t">画面を1枚だけ決める</div><div class="d">一番痛い1業務を選び、その画面だけ作る。範囲を広げない。</div></div>
+        <div class="day"><div class="n">DAY 3</div><div class="t">動くものを出す</div><div class="d">本番データを1店舗分だけ入れて触ってもらう。この時点でだいたい仕様が変わる。</div></div>
+        <div class="day"><div class="n">DAY 4</div><div class="t">直す</div><div class="d">変わった仕様を反映。ここが一番価値が出る工程だと思っています。</div></div>
+        <div class="day"><div class="n">DAY 5</div><div class="t">2店舗目を足す</div><div class="d">店舗差をテンプレートで吸収できるか検証。ここが通れば横展開できます。</div></div>
+      </div>
+    </div>
+
+    <div class="msec">
+      <h3><span class="no">06</span>このデモでやっていないこと</h3>
+      <ul class="limits">
+        <li><b>実APIの接続。</b>OCRと分類は疑似処理です。実装ではモデルとプロンプト、失敗時のリトライまで設計します。</li>
+        <li><b>認証と権限。</b>本部／エリアマネージャー／店長で見えるものが変わる設計は、実案件では最初に入れます。</li>
+        <li><b>保存。</b>このページはリロードで初期状態に戻ります。データベースは持っていません。</li>
+        <li><b>店舗側の画面。</b>今回は本部側だけです。実際にはスマホでの提出画面のほうが作り込みが要ります（片手で、手袋のまま、暗いバックヤードで使えるか）。</li>
+      </ul>
+    </div>
+
+    <div class="foot">
+      <span class="mono">バックヤード ／ 店舗運営・本部業務 管理コンソール（試作）</span>
+      <span>ご質問・実際の要件のすり合わせは、いつでもお受けします。</span>
+    </div>
+  </div>
+</section>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   データ
+   ============================================================ */
+const TODAY = new Date(2026, 8, 3); // 2026-09-03 (木)
+const WD = ["日","月","火","水","木","金","土"];
+const fmtDate = d => `${d.getMonth()+1}/${d.getDate()}`;
+const fmtFull = d => `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${WD[d.getDay()]}）`;
+const yen = n => "¥" + n.toLocaleString("ja-JP");
+const dayOffset = n => { const d = new Date(TODAY); d.setDate(d.getDate()+n); return d; };
+
+const STORES = [
+  {id:"S01", name:"梅田茶屋町店",   type:"直営",   sales:184200, target:170000},
+  {id:"S02", name:"なんば戎橋店",   type:"直営",   sales:168400, target:175000},
+  {id:"S03", name:"天王寺公園前店", type:"FC",     sales:142900, target:140000},
+  {id:"S04", name:"京橋北口店",     type:"直営",   sales:155300, target:150000},
+  {id:"S05", name:"新大阪駅構内店", type:"駅ナカ", sales:198600, target:190000},
+  {id:"S06", name:"心斎橋筋店",     type:"FC",     sales:121700, target:130000},
+  {id:"S07", name:"江坂公園店",     type:"直営",   sales: 96400, target:100000},
+  {id:"S08", name:"千里中央店",     type:"FC",     sales: 88500, target: 95000},
+  {id:"S09", name:"堺東駅前店",     type:"直営",   sales: 74300, target: 80000},
+  {id:"S10", name:"高槻センター街店",type:"駅ナカ",sales: 54300, target: 60000}
+];
+
+const SERIES = [1186000,1204500,1152300,1231800,1298400,1342600,1185300,
+                1198700,1221400,1163800,1247500,1305200,1352900,1284600];
+const DAILY_TARGET = 1250000;
+
+/* 提出状況：直近7日 ＝ index 0 が 6日前、6 が本日 */
+const SUBMIT = {
+  S01:["ok","ok","ok","ok","ok","ok","ok"],
+  S02:["ok","ok","late","ok","ok","ok","ok"],
+  S03:["ok","ok","ok","ok","late","ok","ok"],
+  S04:["ok","ok","ok","ok","ok","ok","ok"],
+  S05:["ok","late","ok","ok","ok","ok","ok"],
+  S06:["ok","ok","ok","off","ok","ok","ok"],
+  S07:["ok","ok","ok","ok","ok","ok","ok"],
+  S08:["late","ok","ok","ok","ok","late","ok"],
+  S09:["ok","ok","ok","ok","ng","ok","ng"],
+  S10:["ok","ok","ok","ok","ok","ok","late"]
+};
+
+/* 業務テンプレート（店舗の業態で出し分ける） */
+const TPL_BASE = [
+  {k:"冷蔵ケース温度（開店前）", type:"num", unit:"℃", limit:"5.0以下"},
+  {k:"冷凍ケース温度（開店前）", type:"num", unit:"℃", limit:"-18.0以下"},
+  {k:"店頭什器の清掃",           type:"yn"},
+  {k:"レジ釣銭準備",             type:"yn"},
+  {k:"消費期限チェック（全棚）", type:"yn"},
+  {k:"空調・照明の点灯確認",     type:"yn"},
+  {k:"ゴミ回収エリアの清掃",     type:"yn"},
+  {k:"従業員の身だしなみ確認",   type:"yn"}
+];
+const TPL_EXTRA = {
+  "直営":  [{k:"防犯カメラ録画確認", type:"yn"}],
+  "FC":    [{k:"本部指定POPの掲出確認", type:"yn"}],
+  "駅ナカ":[{k:"駅係員への当日連絡票の提出", type:"yn"}, {k:"入場カートの返却", type:"yn"}]
+};
+
+/* 日報（本日ぶん） */
+const REPORTS = [
+  {id:"S05", time:"07:12", state:"待ち", flag:"ng",   temp:8.4, note:"開店前点検で冷蔵ケース（3番）の温度が8.4℃。設定は3℃のままで、庫内ファンの音が普段と違います。対象商品はバックヤードの予備冷蔵庫に移して販売を止めています。設備管理課に連絡済み。", by:"店長 中村"},
+  {id:"S09", time:"—",     state:"未提出", flag:"none", note:"", by:""},
+  {id:"S03", time:"07:41", state:"差戻",  flag:"back", temp:4.1, note:"問題ありません。", by:"店長 岡田", backReason:"写真の撮影時刻が前日（9/2 07:20）。当日撮影のものを再提出してください。"},
+  {id:"S01", time:"06:58", state:"待ち",  flag:"ok",  temp:3.2, note:"特記事項なし。台風接近のため夕方以降の客数減を見込み、寿司の追加仕込みを2ロット減らします。", by:"店長 山下"},
+  {id:"S02", time:"07:05", state:"承認",  flag:"ok",  temp:2.9, note:"特記事項なし。", by:"店長 三宅"},
+  {id:"S04", time:"07:20", state:"承認",  flag:"ok",  temp:3.5, note:"入口マットの角がめくれており、つまずきの危険があります。交換を依頼したいです。", by:"店長 藤本"},
+  {id:"S06", time:"07:33", state:"承認",  flag:"ok",  temp:4.4, note:"特記事項なし。", by:"店長 小西"},
+  {id:"S07", time:"07:02", state:"承認",  flag:"ok",  temp:3.0, note:"特記事項なし。", by:"店長 井上"},
+  {id:"S08", time:"07:55", state:"承認",  flag:"ok",  temp:3.8, note:"特記事項なし。", by:"店長 森"},
+  {id:"S10", time:"08:41", state:"待ち",  flag:"late",temp:3.4, note:"アルバイトの遅刻により点検開始が遅れました。内容は問題ありません。", by:"店長 川口"}
+];
+
+/* 帳票サンプル */
+const DOCS = {
+  receipt:{
+    label:"レシート（消耗品）", meta:"IMG_4471.jpg · 1.2MB",
+    paper:{
+      title:"ホームセンター ナニワ", sub:"江坂店 TEL 06-6338-XXXX",
+      date:"2026/09/02 14:38", lines:[
+        ["ポリ袋 45L 100枚","1,280"],
+        ["厨房用ゴム手袋 M","  980"],
+        ["アルコール除菌 5L"," 3,480"],
+        ["モップ替糸 ×3","2,940"],
+        ["軍手 12双","  760"],
+        ["台車用キャスター","2,900"]
+      ],
+      sub1:["小計","12,340"], tax:["消費税(10%)","1,234"], total:["合計","13,574"],
+      pay:["クレジット","13,574"], no:"レジ 03  責 1140"
+    },
+    fields:[
+      {k:"発行元",        v:"ホームセンター ナニワ 江坂店", c:96},
+      {k:"発行日",        v:"2026-09-02", c:99},
+      {k:"小計",          v:"12,340", c:98, num:true},
+      {k:"消費税(10%)",   v:"1,234",  c:97, num:true},
+      {k:"合計",          v:"13,574", c:99, num:true},
+      {k:"支払方法",      v:"クレジット", c:94},
+      {k:"勘定科目（推定）", v:"消耗品費", c:81},
+      {k:"店舗（推定）",   v:"江坂公園店", c:74}
+    ],
+    verify:{ok:true, formula:"小計 12,340 + 消費税 1,234 = 13,574", note:"読取合計と一致。金額はこの時点で確定扱いにできます。"},
+    apply:{type:"expense", msg:"消耗品費 ¥13,574 を 江坂公園店 の経費台帳に登録しました。"}
+  },
+  invoice:{
+    label:"納品書（仕入）", meta:"IMG_4472.jpg · 2.0MB",
+    paper:{
+      title:"株式会社ミナミ食品", sub:"納品書  No.2026-0902-118",
+      date:"2026/09/02", lines:[
+        ["鶏もも肉 2kg ×6","10,800"],
+        ["キャベツ L ×12"," 3,960"],
+        ["米 5kg ×4","  9,200"],
+        ["業務用油 16.5kg"," 4,180"],
+        ["割り箸 3000膳","2,700"]
+      ],
+      sub1:["小計","30,840"], tax:["消費税(8%)","2,467"], total:["合計","33,610"],
+      pay:["掛売","33,610"], no:"担当 松本  検印 ㊞"
+    },
+    fields:[
+      {k:"発行元",       v:"株式会社ミナミ食品", c:97},
+      {k:"伝票番号",     v:"2026-0902-118", c:92},
+      {k:"納品日",       v:"2026-09-02", c:98},
+      {k:"小計",         v:"30,840", c:96, num:true},
+      {k:"消費税(8%)",   v:"2,467",  c:88, num:true},
+      {k:"合計",         v:"33,610", c:95, num:true},
+      {k:"品目数",       v:"5", c:99, num:true},
+      {k:"軽減税率対象", v:"該当あり", c:72}
+    ],
+    verify:{ok:false, formula:"小計 30,840 + 消費税 2,467 = 33,307 ／ 読取合計 33,610", note:"差額 ¥303。伝票側の端数処理か、税率の混在（8%/10%）が疑われます。人の確認に回します。"},
+    apply:{type:"hold", msg:"検算が合わないため、確定せず「要確認」で保留にしました。仕入担当に通知します。"}
+  },
+  daily:{
+    label:"売上日計表（レジ締め）", meta:"IMG_4480.jpg · 0.9MB",
+    paper:{
+      title:"日計表  高槻センター街店", sub:"2026/09/03  営業終了",
+      date:"締め 22:41", lines:[
+        ["現金売上","31,480"],
+        ["クレジット","14,220"],
+        ["電子マネー"," 6,100"],
+        ["QR決済"," 2,500"],
+        ["返品・値引","- 0"],
+        ["客数","  231"]
+      ],
+      sub1:["売上合計","54,300"], tax:["内 消費税","4,936"], total:["レジ現金残","31,480"],
+      pay:["現金過不足","0"], no:"レジ 01  責 0231"
+    },
+    fields:[
+      {k:"店舗",       v:"高槻センター街店", c:98},
+      {k:"営業日",     v:"2026-09-03", c:99},
+      {k:"現金売上",   v:"31,480", c:99, num:true},
+      {k:"キャッシュレス", v:"22,820", c:97, num:true},
+      {k:"売上合計",   v:"54,300", c:99, num:true},
+      {k:"客数",       v:"231", c:96, num:true},
+      {k:"客単価（算出）", v:"235", c:100, num:true},
+      {k:"現金過不足", v:"0", c:99, num:true}
+    ],
+    verify:{ok:true, formula:"現金 31,480 + キャッシュレス 22,820 = 54,300 ／ 現金過不足 0", note:"レジ実査と一致。そのまま売上台帳へ反映できます。"},
+    apply:{type:"sales", msg:"高槻センター街店 の本日売上 ¥54,300 を売上台帳に反映しました。"}
+  }
+};
+
+/* 問い合わせ */
+const INQ = [
+  {id:"Q-1042", store:"S05", at:"08:52", sev:4,
+   text:"お客様から、購入されたサンドイッチに髪の毛の混入があったとの申し出がありました。商品はお預かりし、同ロットは全て売場から下げています。お客様は返金で了承されていますが、今後の対応をご指示ください。",
+   marks:["髪の毛の混入","同ロット","返金"],
+   cat:"クレーム・品質", urg:"最高", dept:"品質管理室", esc:true,
+   why:"「混入」「同ロット」を異物混入の定型表現として検出。商品回収済みの記述があるため、初動は完了・報告フェーズと判定。",
+   draft:"ご報告ありがとうございます。初動（商品確保・同ロット撤去）は適切です。\n\n以下を本日中にお願いします。\n1. 対象商品を密閉して冷蔵保管（廃棄しないでください）\n2. 製造日・ロット番号・仕入先の記録\n3. お客様の連絡先と、経緯の時系列メモ\n\n品質管理室より1時間以内に担当者から店舗へ直接ご連絡します。"},
+  {id:"Q-1041", store:"S05", at:"07:20", sev:3,
+   text:"冷蔵ケース3番の温度が朝から8℃前後から下がりません。設定は3℃のままです。庫内ファンの音がいつもと違う気がします。商品は一旦バックヤードの予備冷蔵庫に移しました。",
+   marks:["8℃前後から下がりません","ファンの音"],
+   cat:"設備故障", urg:"高", dept:"設備管理課", esc:false,
+   why:"温度の数値（8℃）と基準（5℃以下）の逸脱を検出。「音が違う」はファンモーター異常の頻出表現。商品退避済みのため、食品事故リスクは低下と判定。",
+   draft:"ご連絡ありがとうございます。商品の退避は適切な判断です。\n\n設備管理課より本日午前中に業者を手配します。到着まで以下をお願いします。\n・3番ケースは電源を切らず、扉の開閉を最小限に\n・庫内温度を1時間ごとに記録（写真で日報に添付）\n・予備冷蔵庫の温度も併せて確認\n\n復旧見込みが立ち次第、改めてご連絡します。"},
+  {id:"Q-1040", store:"S02", at:"09:14", sev:2,
+   text:"新しいレジでクーポンを読み取るとエラーコード E-42 が出て会計が止まります。1台だけです。旧レジでは通ります。",
+   marks:["E-42","1台だけ"],
+   cat:"システム障害", urg:"中", dept:"情報システム課", esc:false,
+   why:"エラーコード E-42 を既知の事象（クーポンマスタ未同期）として照合。「1台だけ」から端末固有と切り分け。",
+   draft:"E-42 はクーポンマスタの同期待ちで発生します。\n\n該当端末で「設定 > マスタ更新」を実行し、3分ほど待ってから再度お試しください。解消しない場合は端末番号をお知らせください。遠隔で対応します。\n\n復旧までは旧レジでのご対応をお願いします。"},
+  {id:"Q-1039", store:"S08", at:"10:02", sev:2,
+   text:"棚卸の数量が合いません。飲料の在庫が理論値より12点少ないです。伝票の入力ミスかもしれません。",
+   marks:["12点少ない","入力ミス"],
+   cat:"在庫差異", urg:"中", dept:"商品部", esc:false,
+   why:"差異点数が具体的に記載されており、廃棄・移動伝票の未計上が典型要因。金額規模から緊急度は中と判定。",
+   draft:"確認します。先に店舗側で以下をご確認ください。\n\n・当月の廃棄伝票が全て入力されているか\n・他店への移動（貸出）分が計上されているか\n・納品書 No.2026-08-28 以降の検品差異\n\n上記で解消しない場合、商品部で入出庫ログを突合します。棚卸表は修正せずそのまま残してください。"},
+  {id:"Q-1038", store:"S10", at:"11:30", sev:1,
+   text:"駐車場の照明が2本切れています。夜間に暗いとお客様から声をいただきました。",
+   marks:["照明が2本切れ"],
+   cat:"設備・営繕", urg:"低", dept:"設備管理課", esc:false,
+   why:"安全性への言及はあるが即時停止を要する事象ではないため、通常の営繕依頼として起票。",
+   draft:"ご連絡ありがとうございます。営繕依頼として起票しました。\n\n次回巡回（9/9予定）で交換します。それまでに支障がある場合はお知らせください。前倒しで手配します。"},
+  {id:"Q-1037", store:"S06", at:"13:05", sev:1,
+   text:"今月のシフト表の提出期限はいつまででしたか。",
+   marks:["シフト表","提出期限"],
+   cat:"労務・シフト", urg:"低", dept:"人事総務部", esc:false,
+   why:"社内規程で回答可能な定型質問。マニュアル該当箇所を引用して自動回答の候補とした。",
+   draft:"シフト表は前月20日までのご提出です（就業規程 第12条）。\n\n今月分は 9/20（日）までに、店舗ポータルの「シフト提出」からお願いします。20日が休日の場合も期限は変わりません。"}
+];
+
+/* ============================================================
+   状態
+   ============================================================ */
+const state = {
+  view:"dash",
+  notes:false,
+  reports:REPORTS.map(r=>({...r})),
+  selReport:"S05",
+  selPhoto:0,
+  backOpen:false,
+  ocrDoc:null,
+  ocrStage:0,        /* 0=未 1=処理中 2=結果 3=反映済 */
+  ocrApplied:[],
+  ocrPending:5,
+  docsFiled:0,
+  extraSales:0,
+  inq:INQ.map(q=>({...q, settled:false, dept:q.dept})),
+  autoRoute:true
+};
+
+/* ============================================================
+   小物
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const el = (h) => { const t=document.createElement("template"); t.innerHTML=h.trim(); return t.content.firstElementChild; };
+const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const store = id => STORES.find(s=>s.id===id);
+
+function toast(msg){
+  const t = el(`<div class="toast">${esc(msg)}</div>`);
+  $("#toasts").appendChild(t);
+  setTimeout(()=>{ t.style.transition="opacity .3s"; t.style.opacity="0"; setTimeout(()=>t.remove(),320); }, 3400);
+}
+
+/* 状態マーク（色だけに頼らないよう、必ず記号＋文字とセット） */
+const MARK = {
+  ok:   `<svg class="dotm" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>`,
+  late: `<svg class="dotm" viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1l4 7.5H1z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>`,
+  ng:   `<svg class="dotm" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`,
+  wait: `<svg class="dotm" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 1.6"/></svg>`
+};
+const CKMARK = {
+  ok: `<svg class="mk" viewBox="0 0 16 16" fill="none" stroke="#0ca30c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.5 3.5L13 4.5"/></svg>`,
+  ng: `<svg class="mk" viewBox="0 0 16 16" fill="none" stroke="#d03b3b" stroke-width="1.8" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>`
+};
+
+function counts(){
+  const waiting = state.reports.filter(r=>r.state==="待ち"||r.state==="未提出").length;
+  const inqOpen = state.inq.filter(q=>!q.settled).length;
+  return {waiting, inqOpen, ocr:state.ocrPending};
+}
+function paintCounts(){
+  const c = counts();
+  const set = (id,v)=>{ const n=$("#"+id); n.textContent=v; n.dataset.zero = v===0 ? "1":"0"; };
+  set("cnt-reports", c.waiting);
+  set("cnt-ocr", c.ocr);
+  set("cnt-inq", c.inqOpen);
+}
+
+/* ============================================================
+   ビュー：ダッシュボード
+   ============================================================ */
+function viewDash(){
+  const total = STORES.reduce((a,s)=>a+s.sales,0) + state.extraSales;
+  const prev = SERIES[6];
+  const dl = ((total - prev)/prev*100);
+  const submitted = Object.values(SUBMIT).filter(v=>v[6]==="ok"||v[6]==="late").length;
+  const active = Object.values(SUBMIT).filter(v=>v[6]!=="off").length;
+  const c = counts();
+  const customers = 4310;
+
+  return `
+  <div class="vhead">
+    <h3>ダッシュボード</h3>
+    <p>${fmtFull(TODAY)} 時点 ／ 全10店舗</p>
+  </div>
+
+  <div class="topgrid">
+    <div class="hero">
+      <div class="lbl">本日の全店売上</div>
+      <div class="val" id="heroVal"><small>¥</small>${(total).toLocaleString("ja-JP")}</div>
+      <div class="dl">
+        <span class="delta ${dl>=0?"up":"dn"}">${dl>=0?"▲":"▼"} ${Math.abs(dl).toFixed(1)}%</span>
+        前週同曜日（${fmtDate(dayOffset(-7))}木）比
+      </div>
+      <div class="dl" style="margin-top:4px;color:var(--ink-3);font-size:11.5px">目標 ${yen(DAILY_TARGET)} に対し ${total>=DAILY_TARGET?"達成":"あと "+yen(DAILY_TARGET-total)}</div>
+    </div>
+    <div class="tiles">
+      <div class="tile">
+        <div class="lbl">日報の提出</div>
+        <div class="val">${submitted}<em>/${active}店</em></div>
+        <div class="foot">うち遅延 1店 ・ 未提出 ${active-submitted}店</div>
+      </div>
+      <div class="tile ${c.waiting?"attn":""}">
+        <div class="lbl">${c.waiting?MARK.ng:MARK.ok}本部の手番</div>
+        <div class="val">${c.waiting}<em>件</em></div>
+        <div class="foot">承認待ち・未提出の督促</div>
+      </div>
+      <div class="tile">
+        <div class="lbl">帳票の未確定</div>
+        <div class="val">${c.ocr}<em>件</em></div>
+        <div class="foot">本日の読取確定 ${state.docsFiled}件</div>
+      </div>
+    </div>
+  </div>
+
+  <p class="note" data-n="A">本部が最初に見るのは売上ですが、<b>その隣に必ず「自分が止めている件数」を置きます</b>。数字を眺めるだけの画面は3日で開かれなくなるので、開いた瞬間にやることが見えている必要があります。</p>
+
+  <div class="dashcols" style="display:grid;grid-template-columns:1.45fr 1fr;gap:16px;margin-top:16px">
+    <div class="card">
+      <h4>全店売上の推移<span class="sub">直近14日</span></h4>
+      <div class="chartbox" id="lineBox"></div>
+      <div class="legend">
+        <span><i class="sw"></i>日次売上</span>
+        <span><i class="tk"></i>日次目標 ${yen(DAILY_TARGET)}</span>
+      </div>
+    </div>
+    <div class="card">
+      <h4>日報の提出状況<span class="sub">店舗 × 直近7日</span></h4>
+      <div class="grid7">
+        <div></div>
+        ${[...Array(7)].map((_,i)=>{const d=dayOffset(i-6);return `<div class="hd">${d.getDate()}<br>${WD[d.getDay()]}</div>`}).join("")}
+        ${STORES.map(s=>`
+          <div class="nm" title="${esc(s.name)}">${esc(s.name)}</div>
+          ${SUBMIT[s.id].map((v,i)=>{
+            const t={ok:"済",late:"遅",ng:"未",off:"休"}[v];
+            const lb={ok:"提出済",late:"遅延提出",ng:"未提出",off:"休業"}[v];
+            return `<div class="cell ${v}" title="${esc(s.name)} ${fmtDate(dayOffset(i-6))}：${lb}">${t}</div>`;
+          }).join("")}
+        `).join("")}
+      </div>
+      <div class="legend" style="margin-top:12px">
+        <span class="chip ok">${MARK.ok}済</span>
+        <span class="chip late">${MARK.late}遅延</span>
+        <span class="chip ng">${MARK.ng}未提出</span>
+        <span class="chip wait">休業</span>
+      </div>
+      <p class="note" data-n="B">遅延を「未提出」と同じ扱いにしないのが大事です。<b>遅延が続く店は、点検項目が現場の動線に合っていないサイン</b>で、叱る対象ではなくテンプレートを直す対象になります。</p>
+    </div>
+  </div>
+
+  <div class="dashcols" style="display:grid;grid-template-columns:1.45fr 1fr;gap:16px;margin-top:16px">
+    <div class="card">
+      <h4>店舗別 本日売上<span class="sub">縦の目盛は各店の日次目標</span></h4>
+      <div class="bars">
+        ${STORES.slice().sort((a,b)=>b.sales-a.sales).map(s=>{
+          const max = 210000;
+          const w = s.sales/max*100, t = s.target/max*100;
+          const rate = Math.round(s.sales/s.target*100);
+          return `<div class="brow">
+            <div class="nm" title="${esc(s.name)}（${s.type}）">${esc(s.name)}</div>
+            <div class="btrack"><div class="bfill" style="width:${w}%"></div><div class="bmark" style="left:${t}%" title="目標 ${yen(s.target)}"></div></div>
+            <div class="vl">${(s.sales/1000).toFixed(1)}K<i>達成 ${rate}%</i></div>
+          </div>`;
+        }).join("")}
+      </div>
+      <div class="legend"><span><i class="sw"></i>本日売上</span><span><i class="tk"></i>日次目標</span></div>
+    </div>
+    <div class="card">
+      <h4>本部の手番<span class="sub">クリックで該当画面へ</span></h4>
+      <div class="todo">
+        ${state.reports.filter(r=>r.state==="待ち"||r.state==="未提出").map(r=>{
+          const s = store(r.id);
+          const sev = r.flag==="ng"?"var(--crit)":r.flag==="none"?"var(--crit)":r.flag==="late"?"var(--warn)":"var(--line-strong)";
+          const t1 = r.flag==="ng" ? `${s.name}：冷蔵ケース温度 ${r.temp}℃（基準 5.0℃以下）`
+                   : r.flag==="none" ? `${s.name}：日報が未提出（2日連続）`
+                   : `${s.name}：日報の承認待ち`;
+          return `<button data-todo="${r.id}"><span class="sev" style="background:${sev}"></span>
+            <span class="tx"><span class="t1">${esc(t1)}</span><span class="t2">${r.time==="—"?"未提出":r.time+" 提出"} · ${r.id}</span></span>
+            <span class="go">開く →</span></button>`;
+        }).join("")}
+        ${state.inq.filter(q=>!q.settled&&q.sev>=3).map(q=>`
+          <button data-todoq="1"><span class="sev" style="background:${q.sev>=4?"var(--crit)":"var(--serious)"}"></span>
+            <span class="tx"><span class="t1">${esc(store(q.store).name)}：${esc(q.cat)}の問い合わせ（${esc(q.urg)}）</span><span class="t2">${q.at} · ${q.id}</span></span>
+            <span class="go">開く →</span></button>`).join("")}
+      </div>
+      <p class="note" data-n="C">件数ではなく<b>一文で状況が読める形</b>にしています。「3件」では動けませんが、「冷蔵ケース 8.4℃」なら電話をかけられます。</p>
+    </div>
+  </div>`;
+}
+
+/* ---- 折れ線（SVG手書き・ホバー付き） ---- */
+function drawLine(){
+  const box = $("#lineBox"); if(!box) return;
+  const W=740, H=330, L=52, R=16, T=18, B=32;
+  const vals = SERIES.slice();
+  const min = 1080000, max = 1400000;
+  const x = i => L + i*(W-L-R)/(vals.length-1);
+  const y = v => T + (1-(v-min)/(max-min))*(H-T-B);
+
+  const ticks = [1100000,1200000,1300000,1400000];
+  const pts = vals.map((v,i)=>[x(i),y(v)]);
+  const line = pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
+  const area = line + ` L ${x(vals.length-1).toFixed(1)} ${H-B} L ${L} ${H-B} Z`;
+
+  box.innerHTML = `
+  <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="全店売上の推移（直近14日）。9月3日は128万円で、日次目標125万円を上回っています。">
+    ${ticks.map(t=>`<line class="gl" x1="${L}" x2="${W-R}" y1="${y(t).toFixed(1)}" y2="${y(t).toFixed(1)}"/>
+      <text x="${L-9}" y="${(y(t)+4).toFixed(1)}" text-anchor="end">${(t/10000).toFixed(0)}万</text>`).join("")}
+    <line class="tl" x1="${L}" x2="${W-R}" y1="${y(DAILY_TARGET).toFixed(1)}" y2="${y(DAILY_TARGET).toFixed(1)}"/>
+    <text x="${W-R}" y="${(y(DAILY_TARGET)-6).toFixed(1)}" text-anchor="end">目標 125万</text>
+    <path class="ar" d="${area}"/>
+    <path class="ln2" d="${line}"/>
+    ${vals.map((v,i)=>{const d=dayOffset(i-13);return i%2===0?`<text x="${x(i).toFixed(1)}" y="${H-10}" text-anchor="middle">${fmtDate(d)}</text>`:""}).join("")}
+    <line class="cr" id="cross" x1="0" x2="0" y1="${T}" y2="${H-B}" opacity="0"/>
+    <circle class="dot" id="hov" r="5" opacity="0"/>
+    <circle class="dot" cx="${x(13).toFixed(1)}" cy="${y(vals[13]).toFixed(1)}" r="4.5"/>
+    <text class="end" x="${(x(13)-8).toFixed(1)}" y="${(y(vals[13])-12).toFixed(1)}" text-anchor="end">${(vals[13]/10000).toFixed(1)}万</text>
+  </svg>
+  <div class="tip" id="tip"></div>`;
+
+  const svg = box.querySelector("svg"), tip = box.querySelector("#tip");
+  const cross = box.querySelector("#cross"), hov = box.querySelector("#hov");
+  const move = e => {
+    const r = svg.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width * W;
+    let i = Math.round((px - L) / ((W-L-R)/(vals.length-1)));
+    i = Math.max(0, Math.min(vals.length-1, i));
+    const d = dayOffset(i-13), v = vals[i];
+    cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("opacity","1");
+    hov.setAttribute("cx", x(i)); hov.setAttribute("cy", y(v)); hov.setAttribute("opacity","1");
+    const diff = v - DAILY_TARGET;
+    tip.innerHTML = `<div class="d">${d.getMonth()+1}/${d.getDate()}（${WD[d.getDay()]}）</div>
+      <div class="v">${yen(v)}</div>
+      <div class="r">目標比 ${diff>=0?"+":"−"}${yen(Math.abs(diff)).slice(1)}</div>`;
+    tip.style.opacity = "1";
+    const lx = x(i)/W*r.width;
+    tip.style.left = Math.max(0, Math.min(r.width-150, lx-70)) + "px";
+    tip.style.top = (y(v)/H*r.height - 74) + "px";
+  };
+  svg.addEventListener("pointermove", move);
+  svg.addEventListener("pointerleave", ()=>{ tip.style.opacity="0"; cross.setAttribute("opacity","0"); hov.setAttribute("opacity","0"); });
+}
+
+/* ============================================================
+   ビュー：日報
+   ============================================================ */
+function tplFor(type){ return TPL_BASE.concat(TPL_EXTRA[type]||[]); }
+
+function photoSVG(kind, big){
+  const h = big ? 210 : 92;
+  const wrap = inner => `<svg viewBox="0 0 320 210" preserveAspectRatio="xMidYMid slice" style="height:${h}px" role="img" aria-label="提出写真（デモ用の再現イラスト）">${inner}</svg>`;
+  if(kind===0) return wrap(`
+    <rect width="320" height="210" fill="#1e2530"/>
+    <rect x="70" y="34" width="180" height="120" rx="8" fill="#2b3644" stroke="#48566a"/>
+    <rect x="86" y="52" width="148" height="70" rx="4" fill="#0f1620"/>
+    <text x="160" y="104" text-anchor="middle" font-family="monospace" font-size="42" font-weight="700" fill="#ff5f4d">8.4</text>
+    <text x="222" y="104" font-family="monospace" font-size="16" fill="#ff5f4d">℃</text>
+    <text x="160" y="140" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#8b98aa">SET 3.0 / CH3</text>
+    <circle cx="96" cy="164" r="4" fill="#ff5f4d"/><text x="108" y="168" font-family="sans-serif" font-size="11" fill="#ff5f4d">HIGH TEMP</text>`);
+  if(kind===1){
+    const shelf = [0,1,2].map(r=>{
+      const rail = `<rect x="26" y="${34+r*46}" width="268" height="6" fill="#b9b5ab"/>`;
+      const goods = [0,1,2,3,4,5].map(c=>
+        `<rect x="${32+c*44}" y="${8+r*46}" width="34" height="26" rx="2" opacity=".82" fill="${["#c8443a","#3f7fbf","#e0a52c","#6a9a4e","#b06aa8","#4fa8a0"][(r+c)%6]}"/>`
+      ).join("");
+      return rail + goods;
+    }).join("");
+    return wrap(`<rect width="320" height="210" fill="#e8e6e0"/>
+      <rect x="0" y="172" width="320" height="38" fill="#d6d3cb"/>${shelf}`);
+  }
+  return wrap(`
+    <rect width="320" height="210" fill="#dcdcd6"/>
+    <rect x="0" y="140" width="320" height="70" fill="#c9c9c2"/>
+    <rect x="24" y="60" width="80" height="80" rx="3" fill="#a9a9a2" stroke="#8d8d86"/>
+    <rect x="112" y="80" width="70" height="60" rx="3" fill="#b5b5ae" stroke="#8d8d86"/>
+    <rect x="200" y="40" width="96" height="100" rx="4" fill="#8fa3b8" stroke="#6f8398"/>
+    <rect x="210" y="52" width="76" height="34" rx="2" fill="#c3d1de"/>
+    <rect x="210" y="94" width="76" height="34" rx="2" fill="#c3d1de"/>`);
+}
+
+const PHOTO_META = [
+  {t:"冷蔵ケース温度計", tm:"07:12"},
+  {t:"売場全景",         tm:"07:09"},
+  {t:"バックヤード",     tm:"07:14"}
+];
+
+function viewReports(){
+  const r = state.reports.find(x=>x.id===state.selReport) || state.reports[0];
+  const s = store(r.id);
+  const tpl = tplFor(s.type);
+  const chipFor = st => ({"待ち":`<span class="chip wait">${MARK.wait}承認待ち</span>`,
+                          "承認":`<span class="chip ok">${MARK.ok}承認済</span>`,
+                          "差戻":`<span class="chip ng">${MARK.ng}差し戻し中</span>`,
+                          "未提出":`<span class="chip ng">${MARK.ng}未提出</span>`}[st]);
+
+  const list = state.reports.map(x=>{
+    const st = store(x.id);
+    return `<button class="ritem" data-rep="${x.id}" aria-current="${x.id===r.id}">
+      <span class="l1"><span class="nm">${esc(st.name)}</span><span class="tp">${st.type}</span></span>
+      <span class="l2">${chipFor(x.state)}<span class="tm">${x.time}</span></span>
+    </button>`;
+  }).join("");
+
+  let detail;
+  if(r.state==="未提出"){
+    detail = `
+    <div class="dh"><div class="t"><h4>${esc(s.name)}</h4>${chipFor(r.state)}</div>
+      <div class="meta">${r.id} · ${s.type} · 本日 08:00 締切</div></div>
+    <div class="dsec">
+      <div class="st">状況</div>
+      <div class="memo-box">本日と ${fmtDate(dayOffset(-2))} の2日連続で未提出です。過去30日の提出率は 87%（全店平均 98%）。</div>
+      <p class="note" data-n="F">未提出は「送られてこない」ので気づけません。<b>締切時刻を過ぎたら本部側に自動で起票される</b>のがこの行の正体です。督促の文面も定型で用意しておき、押すだけにします。</p>
+    </div>
+    <div class="dsec">
+      <div class="st">本部アクション</div>
+      <div class="acts">
+        <button class="btn pri" data-act="urge">督促を送る（店長 + エリアマネージャー）</button>
+        <button class="btn" data-act="callnote">電話対応として記録</button>
+      </div>
+    </div>`;
+  } else {
+    const ngIdx = r.flag==="ng" ? 0 : -1;
+    detail = `
+    <div class="dh">
+      <div class="t"><h4>${esc(s.name)}</h4>${chipFor(r.state)}
+        ${r.flag==="late"?`<span class="chip late">${MARK.late}遅延提出</span>`:""}
+        ${r.flag==="ng"?`<span class="chip ng">${MARK.ng}基準逸脱 1件</span>`:""}</div>
+      <div class="meta">${r.id} · ${s.type} · ${r.by} · ${r.time} 提出 · テンプレート「${s.type}用 開店前点検 v4」</div>
+    </div>
+
+    <div class="dsec">
+      <div class="st">開店前点検<span class="r">${tpl.length}項目 / 逸脱 ${ngIdx>=0?1:0}件</span></div>
+      <div class="ck">
+        ${tpl.map((t,i)=>{
+          const bad = i===ngIdx;
+          if(t.type==="num"){
+            const v = i===0 ? r.temp : -20.4;
+            return `<div class="${bad?"bad":""}">${bad?CKMARK.ng:CKMARK.ok}${esc(t.k)}<span class="m">${v}${t.unit} / 基準 ${t.limit}</span></div>`;
+          }
+          return `<div>${CKMARK.ok}${esc(t.k)}<span class="m">OK</span></div>`;
+        }).join("")}
+      </div>
+      <p class="note" data-n="D">この項目リストは画面に直書きしていません。<b>店舗マスタの業態から業務テンプレートを引いて描画</b>しています。駅ナカ店だけ「駅係員への連絡票」が増えているのがそれです。店舗ごとに画面を作ると保守できないので、ここは必ずデータ側で吸収します。</p>
+    </div>
+
+    <div class="dsec">
+      <div class="st">提出写真<span class="r">3枚 / 撮影時刻を検証済み</span></div>
+      <div class="bigph">${photoSVG(state.selPhoto, true)}</div>
+      <div class="photos">
+        ${PHOTO_META.map((p,i)=>`<button class="ph" data-ph="${i}" aria-current="${i===state.selPhoto}">
+          ${photoSVG(i,false)}<span class="cap"><b>${esc(p.t)}</b><i>${p.tm}</i></span></button>`).join("")}
+      </div>
+      <p class="note" data-n="E">写真は撮影時刻とセットで保存し、<b>提出日と一致しないものは自動で差し戻し候補</b>にします（天王寺公園前店がその状態です）。前日の写真の使い回しは、放っておくと必ず起きます。</p>
+    </div>
+
+    <div class="dsec">
+      <div class="st">特記事項</div>
+      <div class="memo-box">${esc(r.note)}</div>
+      ${r.state==="差戻" ? `<div class="memo-box" style="margin-top:10px;border-color:var(--crit);background:var(--crit-soft)"><b>差し戻し理由：</b>${esc(r.backReason)}</div>`:""}
+    </div>
+
+    <div class="dsec">
+      <div class="st">本部アクション</div>
+      ${r.state==="承認"
+        ? `<div class="done-banner">${CKMARK.ok}承認済み（本部・運営管理部 / 09:0${Number(r.id.slice(1))}）</div>`
+        : r.state==="差戻"
+        ? `<div class="acts"><span style="font-size:13px;color:var(--ink-2)">店舗の再提出を待っています。</span><button class="btn sm" data-act="remind">再提出を督促</button></div>`
+        : `<div class="acts">
+             <button class="btn pri" data-act="approve">承認する</button>
+             <button class="btn" data-act="openback">差し戻す</button>
+             ${r.flag==="ng"?`<button class="btn" data-act="escalate">設備管理課へエスカレーション</button>`:""}
+           </div>
+           ${state.backOpen?`
+           <div style="margin-top:12px;border:1px solid var(--line);border-radius:7px;padding:13px 15px">
+             <div style="font-size:12px;color:var(--ink-2);margin-bottom:8px">差し戻し理由（必須）</div>
+             <select id="backSel" style="margin-bottom:9px">
+               <option>写真が当日撮影でない</option>
+               <option>点検項目の記入漏れ</option>
+               <option>数値が基準を逸脱（是正内容の記載なし）</option>
+               <option>特記事項の内容が不明瞭</option>
+             </select>
+             <textarea id="backTxt" rows="2" placeholder="店舗への具体的な指示を書いてください（そのまま通知されます）"></textarea>
+             <div class="acts" style="margin-top:9px"><button class="btn pri sm" data-act="doback">差し戻して通知</button><button class="btn sm" data-act="cancelback">やめる</button></div>
+             <p class="note" data-n="G">理由をプルダウンで必須にしているのは、<b>差し戻し理由の集計がそのまま翌月の改善テーマになる</b>からです。自由記述だけにすると、後から一件も分析できません。</p>
+           </div>`:""}`}
+    </div>`;
+  }
+
+  return `
+  <div class="vhead"><h3>日報・チェックリスト</h3><p>${fmtFull(TODAY)} 提出分</p></div>
+  <div class="split">
+    <div>
+      <div class="rlist">
+        <div class="rh"><span>本日の提出</span><span>${state.reports.filter(x=>x.state!=="未提出").length} / ${state.reports.length}</span></div>
+        ${list}
+      </div>
+      <p class="note" data-n="H">並び順は提出時刻ではなく<b>「対応が要るもの」順</b>です。全部見る前提の一覧にすると、忙しい日に上から3件しか見られません。</p>
+    </div>
+    <div class="detail">${detail}</div>
+  </div>`;
+}
+
+/* ============================================================
+   ビュー：帳票よみとり
+   ============================================================ */
+const OCR_STEPS = [
+  ["画像の前処理（傾き補正・二値化）","0.4s"],
+  ["文字認識（OCR）","1.1s"],
+  ["帳票種別の判定","0.3s"],
+  ["項目の抽出と正規化","0.9s"],
+  ["検算（合計 = 小計 + 税）","0.1s"]
+];
+
+function viewOcr(){
+  const d = state.ocrDoc ? DOCS[state.ocrDoc] : null;
+
+  const picker = Object.entries(DOCS).map(([k,v])=>`
+    <button class="pick" data-doc="${k}" aria-current="${state.ocrDoc===k}">
+      <svg class="ic" viewBox="0 0 20 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2.5 1.5h10l5 5v16h-15z"/><path d="M12.5 1.5v5h5M5.5 11h9M5.5 14.5h9M5.5 18h5"/></svg>
+      <span><span class="t1">${esc(v.label)}</span><br><span class="t2">${esc(v.meta)}</span></span>
+    </button>`).join("");
+
+  let right, paperHtml = "";
+  if(!d){
+    right = `<div class="emptybox">左のサンプル画像を選ぶと、読み取りが始まります。<br>実装ではここが、スマホからのアップロードとDrive連携になります。</div>`;
+  } else {
+    const p = d.paper;
+    paperHtml = `
+      <div class="papwrap">
+        <div class="stamp">投入画像</div>
+        <div class="paper">
+          <div class="ttl">${esc(p.title)}</div>
+          <div class="sm">${esc(p.sub)}</div>
+          <div class="sm">${esc(p.date)}</div>
+          <hr>
+          ${p.lines.map(l=>`<div class="ln"><span>${esc(l[0])}</span><span>${esc(l[1])}</span></div>`).join("")}
+          <hr>
+          <div class="ln"><span>${esc(p.sub1[0])}</span><span>${esc(p.sub1[1])}</span></div>
+          <div class="ln"><span>${esc(p.tax[0])}</span><span>${esc(p.tax[1])}</span></div>
+          <div class="ln big"><span>${esc(p.total[0])}</span><span>${esc(p.total[1])}</span></div>
+          <hr>
+          <div class="ln"><span>${esc(p.pay[0])}</span><span>${esc(p.pay[1])}</span></div>
+          <div class="sm" style="margin-top:6px">${esc(p.no)}</div>
+          <div class="bc"></div>
+        </div>
+      </div>`;
+    right = `
+      <div>
+        <div class="card" style="padding:14px 16px">
+          <h4>処理</h4>
+          <div class="steps">
+            ${OCR_STEPS.map((s,i)=>{
+              const st = state.ocrStage>=2 ? "done" : (state.ocrStage===1 ? (i<window.__ocrStep?"done":(i===window.__ocrStep?"run":"")) : "");
+              return `<div class="step" data-s="${st}" data-i="${i}">
+                <span class="n">${st==="done"?"✓":i+1}</span>${esc(s[0])}<span class="ms">${st?s[1]:""}</span></div>`;
+            }).join("")}
+          </div>
+          ${state.ocrStage===0?`<div class="acts" style="margin-top:12px"><button class="btn pri" data-act="run">読み取りを実行</button></div>`:""}
+        </div>
+
+        ${state.ocrStage>=2?`
+        <div class="card" style="margin-top:14px">
+          <h4>抽出結果<span class="sub">低信頼 ${d.fields.filter(f=>f.c<85).length}件</span></h4>
+          <table class="x" style="margin-top:8px">
+            <thead><tr><th>項目</th><th style="text-align:right">読み取り値</th><th style="text-align:right;width:120px">信頼度</th></tr></thead>
+            <tbody>
+              ${d.fields.map((f,i)=>{
+                const low = f.c<85;
+                return `<tr class="${low?"low":""}">
+                  <td>${esc(f.k)}${low?` <span class="chip late" style="margin-left:4px">${MARK.late}要確認</span>`:""}</td>
+                  <td class="${f.num?"num":""}">${low?`<input type="text" value="${esc(f.v)}" size="12" data-fix="${i}">`:esc(f.v)}</td>
+                  <td><span class="conf"><span class="bar ${low?"w":""}"><i style="width:${f.c}%"></i></span><span class="pc">${f.c}%</span></span></td>
+                </tr>`;
+              }).join("")}
+            </tbody>
+          </table>
+          <div class="verify ${d.verify.ok?"ok":"ng"}">
+            ${d.verify.ok?CKMARK.ok:`<svg class="mk" viewBox="0 0 16 16" fill="none" stroke="#fab219" stroke-width="1.7" stroke-linecap="round"><path d="M8 2l6.5 11.5H1.5z" stroke-linejoin="round"/><path d="M8 6.5v3.2M8 11.8v.2"/></svg>`}
+            <span><b>${d.verify.ok?"検算：一致":"検算：不一致 ─ 人の確認へ"}</b>
+            <span class="fm">${esc(d.verify.formula)}</span>
+            <span style="display:block;font-size:12.5px;color:var(--ink-2);margin-top:4px">${esc(d.verify.note)}</span></span>
+          </div>
+          <p class="note" data-n="I">この画面の主役は認識精度ではなく<b>「どこを人が見ればいいか」を絞り込むこと</b>です。信頼度85%未満だけ黄色くして入力欄にしておけば、8項目を確認する作業が2項目になります。さらに、合計＝小計＋税のように<b>計算で確かめられるものはAIに聞かずに検算</b>します。納品書の例では読み取り自体は成功していますが、検算が合わないので確定させません。</p>
+          <div class="acts" style="margin-top:14px">
+            ${state.ocrStage===3
+              ? `<div class="done-banner">${CKMARK.ok}台帳へ反映しました</div>`
+              : `<button class="btn pri" data-act="apply">${d.verify.ok?"確認して台帳へ反映":"要確認として保留する"}</button>
+                 <button class="btn" data-act="reset">別の帳票を読む</button>`}
+          </div>
+        </div>`:""}
+      </div>`;
+  }
+
+  return `
+  <div class="vhead"><h3>帳票よみとり</h3><p>未確定 ${state.ocrPending}件 ／ 本日 ${state.docsFiled}件を台帳へ反映済み</p></div>
+  <div class="ocr">
+    <div>
+      <div class="card" style="padding:14px 16px">
+        <h4>投入する画像<span class="sub">サンプル3種</span></h4>
+        <div class="picker" style="margin-top:10px">${picker}</div>
+      </div>
+      ${paperHtml}
+      <p class="note" data-n="J">帳票の種類を人に選ばせない設計もできますが、<b>最初は「レシート／納品書／日計表」の3択にしたほうが精度も運用も安定します</b>。全自動にするのは、種別判定の当たり方を実データで見てからです。</p>
+    </div>
+    <div>${right}</div>
+  </div>`;
+}
+
+function runOcr(){
+  state.ocrStage = 1; window.__ocrStep = 0;
+  render();
+  const tick = () => {
+    window.__ocrStep++;
+    if(window.__ocrStep >= OCR_STEPS.length){ state.ocrStage = 2; render(); return; }
+    render(); setTimeout(tick, 340);
+  };
+  setTimeout(tick, 340);
+}
+
+/* ============================================================
+   ビュー：問い合わせ
+   ============================================================ */
+const SEVLABEL = {4:["最高","var(--crit)"],3:["高","var(--serious)"],2:["中","var(--warn)"],1:["低","var(--line-strong)"]};
+const DEPTS = ["品質管理室","設備管理課","情報システム課","商品部","人事総務部","運営管理部"];
+
+function viewInq(){
+  const list = state.inq.slice().sort((a,b)=> (a.settled-b.settled) || (b.sev-a.sev));
+  const open = state.inq.filter(q=>!q.settled).length;
+
+  return `
+  <div class="vhead"><h3>問い合わせの仕分け</h3><p>未処理 ${open}件 ／ 本日受信 ${state.inq.length}件</p></div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+      <h4 style="margin:0">自動仕分け</h4>
+      <label class="sws" data-on="${state.autoRoute}">
+        <input type="checkbox" id="autoR" ${state.autoRoute?"checked":""}>
+        <span class="sw" aria-hidden="true"></span>
+        緊急度「高」以上は担当部署へ即時通知
+      </label>
+    </div>
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-2)">
+      本日の分類の内訳：${Object.entries(state.inq.reduce((a,q)=>(a[q.cat]=(a[q.cat]||0)+1,a),{})).map(([k,v])=>`${esc(k)} ${v}件`).join(" ・ ")}
+    </div>
+  </div>
+
+  <div class="inq">
+    ${list.map(q=>{
+      const s = store(q.store);
+      const [ul,uc] = SEVLABEL[q.sev];
+      let txt = esc(q.text);
+      q.marks.forEach(m=>{ txt = txt.replace(esc(m), `<mark>${esc(m)}</mark>`); });
+      return `<div class="icard ${q.settled?"settled":""}">
+        <div class="ih">
+          <span class="sev" style="background:${uc}"></span>
+          <div class="raw">
+            <span class="from">${q.id} · ${esc(s.name)}（${s.type}） · ${q.at} 受信</span>
+            ${txt}
+          </div>
+        </div>
+        <div class="judge">
+          <div class="jf"><div class="k">分類</div><div class="v">${esc(q.cat)}</div></div>
+          <div class="jf"><div class="k">緊急度</div><div class="v" style="color:${uc}">${esc(ul)}${q.esc?" ／ 即時エスカレーション":""}</div></div>
+          <div class="jf"><div class="k">担当部署</div><div class="v">${esc(q.dept)}</div></div>
+          <div class="jf" style="grid-column:1/-1"><div class="k">判断の根拠</div><div class="v" style="font-size:12.5px;font-weight:400;color:var(--ink-2);line-height:1.8">${esc(q.why)}</div></div>
+        </div>
+        <div class="draft">
+          <div class="k">回答ドラフト</div>
+          <div class="body">${esc(q.draft)}</div>
+          <div class="row">
+            ${q.settled
+              ? `<div class="done-banner">${CKMARK.ok}${esc(q.dept)}へ送信しました</div>`
+              : `<button class="btn pri sm" data-send="${q.id}">この内容で送信</button>
+                 <span style="font-size:12.5px;color:var(--ink-3)">担当を変更：</span>
+                 <select data-dept="${q.id}">${DEPTS.map(d=>`<option ${d===q.dept?"selected":""}>${esc(d)}</option>`).join("")}</select>`}
+          </div>
+        </div>
+      </div>`;
+    }).join("")}
+  </div>
+
+  <p class="note" data-n="K">AIに全部やらせないことが肝で、<b>この画面は「分類」「緊急度」「担当」「根拠」「ドラフト」まで出して、送信は必ず人が押します</b>。根拠を出しているのは、外したときに何を直せばいいかが分かるようにするためです。運用が3か月まわって、特定カテゴリの正答率が安定してから、そこだけ自動送信に切り替えます。最初から全自動にすると、事故が起きたときに戻せません。</p>`;
+}
+
+/* ============================================================
+   ビュー：マスタ
+   ============================================================ */
+function viewMaster(){
+  return `
+  <div class="vhead"><h3>店舗・業務テンプレート</h3><p>本部がここを直すと、翌朝から全店の点検項目が変わります</p></div>
+
+  <div class="card">
+    <h4>店舗マスタ<span class="sub">10件</span></h4>
+    <table class="x" style="margin-top:8px">
+      <thead><tr><th>コード</th><th>店舗名</th><th>業態</th><th>適用テンプレート</th><th style="text-align:right">日次目標</th><th style="text-align:right">点検項目数</th></tr></thead>
+      <tbody>
+        ${STORES.map(s=>`<tr>
+          <td style="font-family:var(--font-mono);color:var(--ink-3)">${s.id}</td>
+          <td>${esc(s.name)}</td>
+          <td>${s.type}</td>
+          <td style="font-family:var(--font-mono);font-size:12px">TPL_${s.type==="直営"?"DIRECT":s.type==="FC"?"FRANCHISE":"STATION"}_V4</td>
+          <td class="num">${yen(s.target)}</td>
+          <td class="num">${tplFor(s.type).length}</td>
+        </tr>`).join("")}
+      </tbody>
+    </table>
+    <p class="note" data-n="L">「店舗ごとに業務フローが違う」は、この一列（適用テンプレート）で吸収します。<b>新店が増えても画面は増えません。</b>ここを分けずに画面側で分岐を書き始めると、半年で誰も触れないコードになります。</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:14px">
+    ${["直営","FC","駅ナカ"].map(t=>`
+      <div class="card">
+        <h4>TPL_${t==="直営"?"DIRECT":t==="FC"?"FRANCHISE":"STATION"}_V4<span class="sub">${t}</span></h4>
+        <div style="margin-top:8px">
+          ${tplFor(t).map(x=>`<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px dotted var(--line);font-size:12.5px">
+            <span style="flex:1">${esc(x.k)}</span>
+            <span style="font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3)">${x.type==="num"?"数値 "+x.limit:"○×"}</span>
+          </div>`).join("")}
+        </div>
+      </div>`).join("")}
+  </div>`;
+}
+
+/* ============================================================
+   描画とイベント
+   ============================================================ */
+function render(){
+  const m = $("#main");
+  const html = {dash:viewDash, reports:viewReports, ocr:viewOcr, inquiry:viewInq, master:viewMaster}[state.view]();
+  m.innerHTML = `<div class="view" data-active="1">${html}</div>`;
+  document.querySelectorAll(".nav").forEach(b=>b.setAttribute("aria-current", String(b.dataset.go===state.view)));
+  if(state.view==="dash") drawLine();
+  paintCounts();
+}
+
+function go(v){ state.view=v; state.backOpen=false; render(); window.scrollTo({top:$(".stage").offsetTop-14, behavior:"smooth"}); }
+
+document.addEventListener("click", e=>{
+  const t = e.target;
+
+  const nav = t.closest("[data-go]");
+  if(nav){ go(nav.dataset.go); return; }
+
+  if(t.closest("#noteBtn")){
+    state.notes = !state.notes;
+    document.body.classList.toggle("notes-on", state.notes);
+    $("#noteBtn").setAttribute("aria-pressed", String(state.notes));
+    toast(state.notes ? "解説モード：各画面に設計意図を表示します" : "解説モードを終了しました");
+    return;
+  }
+
+  const todo = t.closest("[data-todo]");
+  if(todo){ state.selReport = todo.dataset.todo; go("reports"); return; }
+  if(t.closest("[data-todoq]")){ go("inquiry"); return; }
+
+  const rep = t.closest("[data-rep]");
+  if(rep){ state.selReport = rep.dataset.rep; state.backOpen=false; state.selPhoto=0; render(); return; }
+
+  const ph = t.closest("[data-ph]");
+  if(ph){ state.selPhoto = +ph.dataset.ph; render(); return; }
+
+  const doc = t.closest("[data-doc]");
+  if(doc){ state.ocrDoc = doc.dataset.doc; state.ocrStage = 0; render(); return; }
+
+  const send = t.closest("[data-send]");
+  if(send){
+    const q = state.inq.find(x=>x.id===send.dataset.send);
+    q.settled = true; render();
+    toast(`${q.id} を ${q.dept} へ振り分けました`);
+    return;
+  }
+
+  const act = t.closest("[data-act]");
+  if(!act) return;
+  const r = state.reports.find(x=>x.id===state.selReport);
+
+  switch(act.dataset.act){
+    case "approve":
+      r.state="承認"; render(); toast(`${store(r.id).name} の日報を承認しました`); break;
+    case "openback":  state.backOpen=true; render(); break;
+    case "cancelback":state.backOpen=false; render(); break;
+    case "doback": {
+      const reason = $("#backSel").value, txt = $("#backTxt").value.trim();
+      r.state="差戻"; r.backReason = reason + (txt?"／"+txt:"");
+      state.backOpen=false; render();
+      toast(`${store(r.id).name} に差し戻しを通知しました`);
+      break;
+    }
+    case "escalate": toast("設備管理課へエスカレーションしました（担当者へ即時通知）"); break;
+    case "urge":     toast(`${store(r.id).name} の店長・エリアマネージャーへ督促を送信しました`); break;
+    case "callnote": toast("電話対応として記録しました"); break;
+    case "remind":   toast("再提出の督促を送信しました"); break;
+    case "run":      runOcr(); break;
+    case "reset":    state.ocrDoc=null; state.ocrStage=0; render(); break;
+    case "apply": {
+      const d = DOCS[state.ocrDoc];
+      state.ocrStage = 3;
+      state.ocrPending = Math.max(0, state.ocrPending-1);
+      state.docsFiled++;
+      if(d.apply.type==="sales") state.extraSales += 0; /* 日計表は既に当日売上へ計上済みのため二重計上しない */
+      render();
+      toast(d.apply.msg);
+      break;
+    }
+  }
+});
+
+document.addEventListener("change", e=>{
+  const dp = e.target.closest("[data-dept]");
+  if(dp){
+    const q = state.inq.find(x=>x.id===dp.dataset.dept);
+    q.dept = dp.value; render();
+    toast(`${q.id} の担当を ${q.dept} に変更しました`);
+    return;
+  }
+  if(e.target.id==="autoR"){ state.autoRoute = e.target.checked; render(); }
+});
+
+/* 起動 */
+$("#topdate").textContent = fmtFull(TODAY);
+paintCounts();
+render();
+</script>
+
+</body>
+</html>
